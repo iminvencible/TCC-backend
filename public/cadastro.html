@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PrevClima - Criar conta</title>
+  <link rel="stylesheet" href="/assets/css/styles.css">
+  <script src="/assets/js/api.js" defer></script>
+  <script src="/assets/js/register.js" defer></script>
+</head>
+<body class="auth-page">
+  <main class="auth-shell">
+    <header class="auth-brand">
+      <span class="brand-mark" aria-hidden="true">&#9889;</span>
+      <h1>Prev<span>Clima</span></h1>
+      <p>Crie sua conta para receber alertas da sua regiao</p>
+    </header>
+    <section class="auth-card">
+      <nav class="tabs" aria-label="Autenticacao">
+        <a href="/">Entrar</a>
+        <a class="active" href="/cadastro.html">Criar conta</a>
+      </nav>
+      <form id="register-form">
+        <div class="field">
+          <label for="name">Nome completo</label>
+          <input id="name" name="name" autocomplete="name" minlength="2" maxlength="120" required>
+        </div>
+        <div class="field">
+          <label for="email">E-mail</label>
+          <input id="email" name="email" type="email" autocomplete="email" required>
+        </div>
+        <div class="field">
+          <label for="password">Senha</label>
+          <input id="password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required>
+          <span class="helper">Minimo de 8 caracteres, com maiuscula, minuscula, numero e simbolo.</span>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label for="city">Cidade (opcional)</label>
+            <input id="city" name="city" maxlength="100">
+          </div>
+          <div class="field">
+            <label for="state">UF</label>
+            <input id="state" name="state" maxlength="2" pattern="[A-Za-z]{2}">
+          </div>
+        </div>
+        <p id="form-message" class="error" role="alert"></p>
+        <button class="button" type="submit">Criar conta</button>
+      </form>
+    </section>
+    <a class="guest-link" href="/inicio.html">Continuar como visitante</a>
+  </main>
+</body>
+</html>

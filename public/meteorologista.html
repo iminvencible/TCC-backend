@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PrevClima - Acesso profissional</title>
+  <link rel="stylesheet" href="/assets/css/styles.css">
+  <script src="/assets/js/api.js" defer></script>
+  <script src="/assets/js/login.js" defer></script>
+</head>
+<body class="auth-page" data-professional="true">
+  <main class="auth-shell">
+    <header class="auth-brand">
+      <span class="brand-mark" aria-hidden="true">&#9889;</span>
+      <h1>Prev<span>Clima</span></h1>
+      <p>Acesso profissional</p>
+    </header>
+    <nav class="role-switch" aria-label="Tipo de acesso">
+      <a href="/">Usuario</a>
+      <a class="active" href="/meteorologista.html">Meteorologista</a>
+    </nav>
+    <p class="restricted-note">Contas profissionais sao criadas por um proprietario autorizado.</p>
+    <section class="auth-card">
+      <form id="login-form">
+        <div class="field">
+          <label for="email">E-mail institucional</label>
+          <input id="email" name="email" type="email" autocomplete="email" required>
+        </div>
+        <div class="field">
+          <label for="password">Senha</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" required>
+        </div>
+        <p id="form-message" class="error" role="alert"></p>
+        <button class="button" type="submit">Entrar como profissional</button>
+      </form>
+    </section>
+  </main>
+</body>
+</html>

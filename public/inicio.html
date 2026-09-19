@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PrevClima - Inicio</title>
+  <link rel="stylesheet" href="/assets/css/styles.css">
+  <script src="/assets/js/api.js" defer></script>
+  <script src="/assets/js/home.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/inicio.html"><span class="brand-mark">&#9889;</span> Prev<span>Clima</span></a>
+    <div class="top-actions">
+      <a class="icon-button" href="/alertas.html" aria-label="Alertas">!</a>
+      <a class="icon-button" href="/perfil.html" aria-label="Perfil">&#9679;</a>
+    </div>
+  </header>
+  <main class="app-shell">
+    <div class="location-row">
+      <button id="open-location" class="location-button" type="button">&#8982; <span id="location-name">Mongagua, SP</span></button>
+      <span id="auth-state" class="muted">Visitante</span>
+    </div>
+    <section class="weather-hero" aria-live="polite">
+      <div class="weather-icon" aria-hidden="true">&#9729;&#65039;</div>
+      <div class="temperature"><span id="temperature">--</span><small>&deg;C</small></div>
+      <h1 id="condition" class="condition">Carregando previsao...</h1>
+      <p class="muted">Max <span id="max-temperature">--</span>&deg; | Min <span id="min-temperature">--</span>&deg;</p>
+    </section>
+    <section class="weather-grid" aria-label="Condicoes atuais">
+      <div class="metric"><small>Umidade</small><strong id="humidity">--%</strong></div>
+      <div class="metric"><small>Vento</small><strong id="wind">-- km/h</strong></div>
+      <div class="metric"><small>Chance de chuva</small><strong id="rain">--%</strong></div>
+    </section>
+    <section id="warning-panel" class="warning-panel">
+      <div class="risk-icon" aria-hidden="true">!</div>
+      <h2 id="warning-title">Nenhum alerta carregado</h2>
+      <p id="warning-message" class="muted">Aguarde a consulta ao banco de dados.</p>
+      <p id="data-source" class="data-source"></p>
+    </section>
+  </main>
+  <nav class="bottom-nav" aria-label="Navegacao principal">
+    <a class="active" href="/inicio.html">&#8962;<span>Inicio</span></a>
+    <a href="/alertas.html">!<span>Alertas <b id="alert-badge"></b></span></a>
+    <a class="nav-center" href="/inicio.html" aria-label="Previsao atual">&#9928;</a>
+    <a href="/mapa.html">&#9678;<span>Mapa</span></a>
+    <a href="/perfil.html">&#9679;<span>Perfil</span></a>
+  </nav>
+  <div id="location-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="location-title">
+    <form id="location-form" class="modal-card">
+      <h2 id="location-title">Alterar localizacao</h2>
+      <div class="form-row">
+        <div class="field"><label for="city">Cidade</label><input id="city" required maxlength="100"></div>
+        <div class="field"><label for="state">UF</label><input id="state" required maxlength="2" pattern="[A-Za-z]{2}"></div>
+      </div>
+      <p id="location-message" class="error"></p>
+      <div class="actions-row">
+        <button class="button secondary" id="close-location" type="button">Cancelar</button>
+        <button class="button" type="submit">Confirmar</button>
+      </div>
+    </form>
+  </div>
+</body>
+</html>
