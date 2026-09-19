@@ -76,9 +76,13 @@ Caracteres reservados na senha precisam estar codificados para URL.
 
 Os dados meteorologicos incluidos sao claramente marcados como demonstracao. Ainda
 nao existe integracao em tempo real com radar, CEMADEN ou outro provedor oficial.
-O mapa usa Leaflet pelo CDN da cdnjs e blocos cartograficos do OpenStreetMap; por isso,
+O mapa usa Leaflet pelo CDN oficial unpkg e blocos cartograficos do OpenStreetMap; por isso,
 o mapa-base precisa de acesso a internet no navegador. Os alertas e as geometrias
 continuam vindo da API local.
+
+Alertas emitidos nao possuem rotas de alteracao ou exclusao. Essa imutabilidade fica na
+camada da aplicacao para que as migracoes funcionem com usuarios MySQL de privilegios
+minimos, sem exigir permissao administrativa para criar triggers.
 
 ## Verificacao
 

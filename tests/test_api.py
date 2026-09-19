@@ -277,6 +277,13 @@ def test_mark_alert_read_is_idempotent(registered_client: TestClient, db):
     assert registered_client.get("/api/v1/alerts").json()[0]["is_read"] is True
 
 
+def test_issued_alerts_cannot_be_changed_or_deleted(client: TestClient):
+    alert_id = client.get("/api/v1/alerts").json()[0]["id"]
+
+    assert client.patch(f"/api/v1/alerts/{alert_id}", json={"title": "Alterado"}).status_code == 405
+    assert client.delete(f"/api/v1/alerts/{alert_id}").status_code == 405
+
+
 def test_alerts_are_filtered_by_authenticated_location(registered_client: TestClient):
     headers = csrf_headers(registered_client)
     response = registered_client.patch(

@@ -141,10 +141,6 @@ CREATE TABLE weather_alerts (
 
 CREATE INDEX ix_alerts_active ON weather_alerts (valid_until, severity);
 
-CREATE TRIGGER weather_alerts_no_update BEFORE UPDATE ON weather_alerts FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Issued weather alerts are immutable';
-
-CREATE TRIGGER weather_alerts_no_delete BEFORE DELETE ON weather_alerts FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Issued weather alerts cannot be deleted';
-
 CREATE TABLE weather_reports (
     id INTEGER NOT NULL AUTO_INCREMENT,
     reporter_id INTEGER NOT NULL,

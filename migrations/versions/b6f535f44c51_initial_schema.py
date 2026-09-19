@@ -168,17 +168,6 @@ def upgrade() -> None:
         sa.UniqueConstraint("source_key"),
     )
     op.create_index("ix_alerts_active", "weather_alerts", ["valid_until", "severity"], unique=False)
-    if op.get_bind().dialect.name == "mysql":
-        op.execute(
-            "CREATE TRIGGER weather_alerts_no_update BEFORE UPDATE ON weather_alerts "
-            "FOR EACH ROW SIGNAL SQLSTATE '45000' "
-            "SET MESSAGE_TEXT = 'Issued weather alerts are immutable'"
-        )
-        op.execute(
-            "CREATE TRIGGER weather_alerts_no_delete BEFORE DELETE ON weather_alerts "
-            "FOR EACH ROW SIGNAL SQLSTATE '45000' "
-            "SET MESSAGE_TEXT = 'Issued weather alerts cannot be deleted'"
-        )
     op.create_table(
         "weather_reports",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
