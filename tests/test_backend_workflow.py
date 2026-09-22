@@ -8,7 +8,9 @@ from sqlalchemy import func, select
 from app.config import Settings
 from app.inmet_sync import sync_inmet_warnings
 from app.integrations.inmet import InmetClient, InmetError, parse_warning_feed
+from app.integrations.open_meteo import OpenMeteoClient, OpenMeteoError
 from app.models import AlertReview, AuditEvent, Role, User, WeatherAlert
+from app.open_meteo_sync import get_open_meteo_or_fallback, refresh_open_meteo_forecast
 from app.security import hash_password
 from tests.conftest import csrf_headers
 
@@ -344,3 +346,123 @@ def test_inmet_client_rejects_malformed_xml_and_untrusted_url():
     unavailable = httpx.MockTransport(lambda _: httpx.Response(429))
     with pytest.raises(InmetError):
         InmetClient(Settings(inmet_enabled=True), transport=unavailable).fetch_warnings()
+
+
+def open_meteo_payload(now: datetime | None = None) -> dict:
+    now = now or datetime.now(UTC)
+    return {
+        "current": {
+            "time": int(now.timestamp()),
+            "temperature_2m": 24.2,
+            "relative_humidity_2m": 71,
+            "weather_code": 95,
+            "wind_speed_10m": 18.4,
+        },
+        "daily": {
+            "temperature_2m_min": [19.1, 18.8],
+            "temperature_2m_max": [27.3, 26.0],
+            "precipitation_probability_max": [86, 62],
+            "wind_gusts_10m_max": [74.0, 52.0],
+        },
+    }
+
+
+def test_open_meteo_geocodes_persists_and_reuses_fresh_cache(db):
+    requests: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request.url.host)
+        if request.url.host == "geocoding-api.open-meteo.com":
+            return httpx.Response(
+                200,
+                json={
+                    "results": [
+                        {
+                            "country_code": "BR",
+                            "admin1": "São Paulo",
+                            "latitude": -24.10,
+                            "longitude": -46.62,
+                        }
+                    ]
+                },
+            )
+        return httpx.Response(200, json=open_meteo_payload())
+
+    settings = Settings(open_meteo_enabled=True, open_meteo_cache_minutes=15)
+    client = OpenMeteoClient(settings, transport=httpx.MockTransport(handler))
+    forecast = refresh_open_meteo_forecast(
+        db,
+        city="Mongaguá",
+        state="SP",
+        client=client,
+    )
+    assert forecast.source_name == "Open-Meteo"
+    assert forecast.source_url == "https://open-meteo.com/"
+    assert forecast.condition == "Tempestade"
+    assert forecast.rain_probability == 86
+    assert forecast.severity == "HIGH"
+    assert requests == ["geocoding-api.open-meteo.com", "api.open-meteo.com"]
+
+    cached, is_stale = get_open_meteo_or_fallback(
+        db,
+        city="Mongaguá",
+        state="SP",
+        settings=settings,
+        client=client,
+    )
+    assert cached.id == forecast.id
+    assert is_stale is False
+    assert requests == ["geocoding-api.open-meteo.com", "api.open-meteo.com"]
+
+
+def test_open_meteo_uses_recent_saved_data_when_provider_fails(db):
+    settings = Settings(open_meteo_enabled=True, open_meteo_cache_minutes=15)
+    good_client = OpenMeteoClient(
+        settings,
+        transport=httpx.MockTransport(lambda _: httpx.Response(200, json=open_meteo_payload())),
+    )
+    forecast = refresh_open_meteo_forecast(
+        db,
+        city="Santos",
+        state="SP",
+        latitude=-23.96,
+        longitude=-46.33,
+        client=good_client,
+    )
+    forecast.issued_at = datetime.now(UTC) - timedelta(minutes=15)
+    forecast.valid_until = datetime.now(UTC) - timedelta(minutes=1)
+    db.commit()
+
+    unavailable = OpenMeteoClient(
+        settings,
+        transport=httpx.MockTransport(lambda _: httpx.Response(503)),
+    )
+    cached, is_stale = get_open_meteo_or_fallback(
+        db,
+        city="Santos",
+        state="SP",
+        latitude=-23.96,
+        longitude=-46.33,
+        settings=settings,
+        client=unavailable,
+    )
+    assert cached.id == forecast.id
+    assert is_stale is True
+
+
+def test_open_meteo_rejects_untrusted_url_and_invalid_payload():
+    with pytest.raises(OpenMeteoError, match="não é permitida"):
+        OpenMeteoClient(
+            Settings(
+                open_meteo_enabled=True,
+                open_meteo_api_url="https://exemplo.com/forecast",
+            ),
+            transport=httpx.MockTransport(lambda _: httpx.Response(200, json=open_meteo_payload())),
+        ).fetch_forecast(-23.55, -46.63)
+
+    malformed = OpenMeteoClient(
+        Settings(open_meteo_enabled=True),
+        transport=httpx.MockTransport(lambda _: httpx.Response(200, json={"current": {}})),
+    )
+    with pytest.raises(OpenMeteoError, match="previsão incompleta"):
+        malformed.fetch_forecast(-23.55, -46.63)

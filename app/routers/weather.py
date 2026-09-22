@@ -3,12 +3,13 @@ from math import asin, cos, radians, sin, sqrt
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import and_, desc, func, select, update
+from sqlalchemy import and_, desc, select, update
 from sqlalchemy.exc import IntegrityError
 
 from app.audit import record_audit
 from app.dependencies import CurrentUser, DbSession, optional_current_user, require_roles
 from app.models import AlertRead, AlertReview, Forecast, User, WeatherAlert
+from app.open_meteo_sync import get_open_meteo_or_fallback
 from app.schemas import (
     AlertCreateRequest,
     AlertOut,
@@ -49,6 +50,10 @@ def alert_out(alert: WeatherAlert, read_ids: set[int] | None = None) -> AlertOut
         valid_until=alert.valid_until,
         is_read=bool(read_ids and alert.id in read_ids),
     )
+
+
+def forecast_out(forecast: Forecast, *, is_stale: bool = False) -> ForecastOut:
+    return ForecastOut.model_validate(forecast).model_copy(update={"is_stale": is_stale})
 
 
 def active_alerts(db: DbSession) -> list[WeatherAlert]:
@@ -319,22 +324,25 @@ def current_forecast(
     db: DbSession,
     city: str = Query(default="Mongagua", min_length=2, max_length=100),
     state: str = Query(default="SP", min_length=2, max_length=2),
+    latitude: float | None = Query(default=None, ge=-90, le=90),
+    longitude: float | None = Query(default=None, ge=-180, le=180),
 ):
-    forecast = db.scalar(
-        select(Forecast)
-        .where(
-            func.lower(Forecast.city) == city.strip().lower(),
-            Forecast.state == state.upper(),
-            Forecast.issued_at <= now_utc(),
-            Forecast.valid_until > now_utc(),
+    if (latitude is None) != (longitude is None):
+        raise HTTPException(
+            status_code=422, detail="Latitude e longitude devem ser informadas juntas"
         )
-        .order_by(desc(Forecast.issued_at))
+    forecast, is_stale = get_open_meteo_or_fallback(
+        db,
+        city=city,
+        state=state,
+        latitude=latitude,
+        longitude=longitude,
     )
     if not forecast:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Previsão atual indisponível"
         )
-    return forecast
+    return forecast_out(forecast, is_stale=is_stale)
 
 
 @router.get("/home", response_model=HomeOut)
@@ -354,8 +362,14 @@ def home(
         city, state = user.city, user.state
     if user and latitude is None and user.latitude is not None and user.longitude is not None:
         latitude, longitude = float(user.latitude), float(user.longitude)
-    forecast = None
-    if latitude is not None and longitude is not None:
+    forecast, is_stale = get_open_meteo_or_fallback(
+        db,
+        city=city,
+        state=state,
+        latitude=latitude,
+        longitude=longitude,
+    )
+    if not forecast and latitude is not None and longitude is not None:
         area_forecasts = db.scalars(
             select(Forecast)
             .where(
@@ -373,22 +387,11 @@ def home(
             ),
             None,
         )
-    if not forecast and (latitude is None or longitude is None):
-        forecast = db.scalar(
-            select(Forecast)
-            .where(
-                func.lower(Forecast.city) == city.strip().lower(),
-                Forecast.state == state.upper(),
-                Forecast.issued_at <= now_utc(),
-                Forecast.valid_until > now_utc(),
-            )
-            .order_by(desc(Forecast.issued_at))
-        )
     alerts = alerts_for_location(active_alerts(db), latitude, longitude)
     read_ids = user_read_ids(db, user, [alert.id for alert in alerts])
     rendered = [alert_out(alert, read_ids) for alert in alerts]
     return HomeOut(
-        forecast=forecast,
+        forecast=forecast_out(forecast, is_stale=is_stale) if forecast else None,
         active_alerts=rendered,
         unread_alert_count=(
             sum(1 for alert in rendered if not alert.is_read)

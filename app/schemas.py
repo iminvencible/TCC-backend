@@ -189,6 +189,8 @@ class ForecastOut(BaseModel):
     severity: str
     description: str | None
     source_name: str
+    source_url: str | None = None
+    is_stale: bool = False
     issued_at: datetime
     valid_until: datetime
 

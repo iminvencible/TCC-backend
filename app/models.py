@@ -102,6 +102,7 @@ class Forecast(Base):
     source_name: Mapped[str] = mapped_column(
         String(120), default="Dados demonstrativos", nullable=False
     )
+    source_url: Mapped[str | None] = mapped_column(String(500))
     issued_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     valid_until: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     created_at: Mapped[datetime] = mapped_column(

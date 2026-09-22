@@ -24,7 +24,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       document.querySelector("#mobile-humidity").textContent = `${forecast.humidity}%`;
       document.querySelector("#mobile-wind").textContent = `${forecast.wind_kmh} km/h`;
       document.querySelector("#mobile-rain").textContent = `${forecast.rain_probability}%`;
-      document.querySelector("#mobile-source").textContent = `Fonte: ${forecast.source_name}`;
+      const source = document.querySelector("#mobile-source");
+      source.textContent = `Fonte: ${forecast.source_name}${forecast.is_stale ? " (último dado salvo)" : ""}`;
+      if (forecast.source_url) source.href = forecast.source_url; else source.removeAttribute("href");
     }
     const alerts = home.active_alerts || [];
     document.querySelector("#mobile-risk-title").textContent = alerts.length ? `${alerts.length} aviso(s) ativo(s)` : "Sem avisos ativos";

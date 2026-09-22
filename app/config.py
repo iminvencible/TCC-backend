@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -24,6 +24,14 @@ class Settings(BaseSettings):
     inmet_timeout_seconds: float = 8.0
     inmet_max_response_bytes: int = 2_000_000
     inmet_user_agent: str = "PrevClima/0.1 (integracao academica)"
+    open_meteo_enabled: bool = False
+    open_meteo_api_url: str = "https://api.open-meteo.com/v1/forecast"
+    open_meteo_geocoding_url: str = "https://geocoding-api.open-meteo.com/v1/search"
+    open_meteo_timeout_seconds: float = Field(default=8.0, gt=0, le=60)
+    open_meteo_max_response_bytes: int = Field(default=1_000_000, ge=1024, le=5_000_000)
+    open_meteo_cache_minutes: int = Field(default=15, ge=1, le=1440)
+    open_meteo_stale_hours: int = Field(default=24, ge=1, le=168)
+    open_meteo_user_agent: str = "PrevClima/0.1 (integracao academica)"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
@@ -52,6 +60,11 @@ class Settings(BaseSettings):
             raise RuntimeError("SEED_DEMO_DATA deve estar desabilitado em producao")
         if self.inmet_enabled and not self.inmet_warning_rss_url.startswith("https://"):
             raise RuntimeError("A URL do INMET deve usar HTTPS em producao")
+        if self.open_meteo_enabled and not (
+            self.open_meteo_api_url.startswith("https://")
+            and self.open_meteo_geocoding_url.startswith("https://")
+        ):
+            raise RuntimeError("As URLs do Open-Meteo devem usar HTTPS em producao")
 
 
 @lru_cache

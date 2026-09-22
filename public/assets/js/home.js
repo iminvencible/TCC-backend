@@ -14,7 +14,9 @@ document.addEventListener("DOMContentLoaded", () => {
       document.querySelector("#humidity").textContent = `${forecast.humidity}%`;
       document.querySelector("#wind").textContent = `${Number(forecast.wind_kmh)} km/h`;
       document.querySelector("#rain").textContent = `${forecast.rain_probability}%`;
-      document.querySelector("#data-source").textContent = forecast.source_name;
+      const source = document.querySelector("#data-source");
+      source.textContent = `Fonte: ${forecast.source_name}${forecast.is_stale ? " (último dado salvo)" : ""}`;
+      if (forecast.source_url) source.href = forecast.source_url; else source.removeAttribute("href");
       document.querySelector("#updated-at").textContent = `Atualizado ${PrevClima.relativeTime(forecast.issued_at)}`;
     } else {
       document.querySelector("#condition").textContent = "Sem previsão cadastrada para esta localidade";
@@ -22,6 +24,7 @@ document.addEventListener("DOMContentLoaded", () => {
         document.querySelector(`#${id}`).textContent = "--";
       });
       document.querySelector("#data-source").textContent = "";
+      document.querySelector("#data-source").removeAttribute("href");
       document.querySelector("#updated-at").textContent = "";
     }
 

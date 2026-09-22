@@ -231,4 +231,8 @@ CREATE TABLE audit_events (
 
 CREATE INDEX ix_audit_target_created ON audit_events (target_type, target_id, created_at);
 
-INSERT INTO alembic_version (version_num) VALUES ('9d62a8f410be');
+-- Running upgrade 9d62a8f410be -> 4a8c1e7d2b90
+
+ALTER TABLE forecasts ADD COLUMN source_url VARCHAR(500);
+
+INSERT INTO alembic_version (version_num) VALUES ('4a8c1e7d2b90');

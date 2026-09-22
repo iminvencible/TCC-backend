@@ -14,6 +14,8 @@ leve de desenvolvimento.
 - Sessão por cookie `HttpOnly`, proteção CSRF, senha Argon2 e revogação de sessão.
 - Perfil, preferências, localização, previsão, avisos, mapa, conteúdo educativo e
   relatos conectados ao banco.
+- Previsão atual e diária obtida do Open-Meteo, com geocodificação de cidades,
+  cache de 15 minutos e fallback para o último dado salvo.
 - Meteorologista: emissão direta de avisos, revisão de relatos, sincronização de
   avisos oficiais do INMET e marcação de aviso como alarme falso ou pendente de
   correção, com histórico de auditoria.
@@ -69,9 +71,32 @@ arquivo `CONTAS_DE_TESTE.txt`.
 Troque as senhas e `JWT_SECRET` antes de qualquer uso fora da demonstração local.
 O modo de produção recusa dados e credenciais de demonstração.
 
-## Integração com o INMET
+## Open-Meteo e INMET
 
-O projeto consulta sob demanda o RSS oficial de avisos:
+O Open-Meteo fornece as condições atuais, temperaturas mínima e máxima, umidade,
+vento e chance de chuva. A consulta é feita automaticamente quando a tela inicial
+ou `/api/v1/forecasts/current` solicita uma localidade sem cache recente. Não é
+necessária chave de API.
+
+O resultado é armazenado no banco por 15 minutos. Se o serviço ficar temporariamente
+indisponível, o PrevClima pode exibir por até 24 horas o último resultado salvo,
+identificado na interface como tal. A fonte e o link de atribuição permanecem
+visíveis no site e no aplicativo móvel.
+
+Variáveis do Open-Meteo:
+
+| Variável | Finalidade |
+| --- | --- |
+| `OPEN_METEO_ENABLED` | Habilita a previsão automática |
+| `OPEN_METEO_API_URL` | Endpoint de previsão |
+| `OPEN_METEO_GEOCODING_URL` | Conversão de cidade/UF em coordenadas |
+| `OPEN_METEO_TIMEOUT_SECONDS` | Limite de espera |
+| `OPEN_METEO_MAX_RESPONSE_BYTES` | Tamanho máximo aceito |
+| `OPEN_METEO_CACHE_MINUTES` | Validade do cache recente |
+| `OPEN_METEO_STALE_HOURS` | Janela máxima do fallback salvo |
+
+O INMET continua sendo a fonte oficial dos avisos meteorológicos brasileiros. O
+projeto consulta sob demanda o RSS oficial de avisos:
 
 `https://apiprevmet3.inmet.gov.br/avisos/rss`
 
@@ -81,8 +106,9 @@ está indisponível. Avisos sem um polígono parseável e com coordenadas dentro
 limites não recebem área inventada e são ignorados na importação espacial.
 
 Não foi encontrada documentação formal ou contrato para uma API JSON de previsão
-nas páginas oficiais do INMET consultadas. Por isso, a aplicação não depende de uma rota não documentada: previsões continuam
-no banco local e dados de demonstração permanecem claramente identificados.
+nas páginas oficiais do INMET consultadas. Por isso, o projeto usa apenas o feed
+oficial de avisos do INMET e obtém a previsão pelo Open-Meteo, sem depender de uma
+rota não documentada.
 
 Variáveis disponíveis:
 
@@ -104,6 +130,7 @@ python -m app.sync_inmet
 - `migrations/` é a fonte executável e versionada do esquema.
 - A revisão `9d62a8f410be` migra `OWNER` para `ADMIN`, adiciona origem e situação dos
   avisos, histórico de revisão e eventos de auditoria.
+- A revisão `4a8c1e7d2b90` adiciona o link de atribuição da fonte às previsões.
 - `banco tcc.sql` e `database/schema.mysql.sql` documentam a estrutura MySQL.
 - `database/demo_seed.sql` contém dados meteorológicos demonstrativos sem senhas.
 - `python -m app.seed` cria funções, contas locais com hash e dados de demonstração
