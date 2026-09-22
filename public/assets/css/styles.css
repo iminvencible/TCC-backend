@@ -185,6 +185,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .metric strong { font-size: 21px; }
 .warning-panel { align-self: stretch; background: linear-gradient(160deg, rgba(81, 31, 52, .92), rgba(24, 27, 51, .96)); border: 1px solid rgba(255, 95, 109, .42); border-radius: 24px; display: flex; flex-direction: column; justify-content: center; min-height: 280px; padding: 28px; text-align: center; }
 .warning-panel h2 { font-size: 20px; margin: 0 0 8px; }
+.warning-panel .button { margin-top: 18px; }
 .risk-icon { align-items: center; background: var(--yellow); clip-path: polygon(50% 0, 100% 100%, 0 100%); color: #342600; display: flex; font-size: 28px; font-weight: 900; height: 62px; justify-content: center; margin: 0 auto 16px; padding-top: 18px; width: 70px; }
 .data-source { color: var(--muted); font-size: 12px; margin-top: 10px; }
 
