@@ -130,13 +130,31 @@ class WeatherAlert(Base):
             "severity IN ('LOW', 'MODERATE', 'HIGH', 'CRITICAL')",
             name="ck_alert_severity",
         ),
+        CheckConstraint(
+            "validation_status IN ('ACTIVE', 'FALSE_ALARM', 'NEEDS_CORRECTION')",
+            name="ck_alert_validation_status",
+        ),
+        CheckConstraint(
+            "origin IN ('DEMO', 'MANUAL', 'INMET')",
+            name="ck_alert_origin",
+        ),
         Index("ix_alerts_active", "valid_until", "severity"),
+        Index("ix_alerts_validation", "validation_status", "valid_until"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     source_key: Mapped[str | None] = mapped_column(String(80), unique=True)
     is_demo: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    origin: Mapped[str] = mapped_column(String(16), default="MANUAL", nullable=False)
+    source_name: Mapped[str] = mapped_column(String(120), default="PrevClima", nullable=False)
+    source_url: Mapped[str | None] = mapped_column(String(500))
+    validation_status: Mapped[str] = mapped_column(String(24), default="ACTIVE", nullable=False)
+    status_reason: Mapped[str | None] = mapped_column(Text)
+    status_changed_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    status_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     title: Mapped[str] = mapped_column(String(140), nullable=False)
     message: Mapped[str] = mapped_column(Text, nullable=False)
     event_type: Mapped[str] = mapped_column(String(40), nullable=False)
@@ -149,6 +167,50 @@ class WeatherAlert(Base):
     recommendations: Mapped[list[str]] = mapped_column(JSON, nullable=False)
     issued_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     valid_until: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False
+    )
+
+
+class AlertReview(Base):
+    __tablename__ = "alert_reviews"
+    __table_args__ = (
+        CheckConstraint(
+            "previous_status IN ('ACTIVE', 'FALSE_ALARM', 'NEEDS_CORRECTION')",
+            name="ck_alert_review_previous_status",
+        ),
+        CheckConstraint(
+            "new_status IN ('ACTIVE', 'FALSE_ALARM', 'NEEDS_CORRECTION')",
+            name="ck_alert_review_new_status",
+        ),
+        Index("ix_alert_reviews_alert_created", "alert_id", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    alert_id: Mapped[int] = mapped_column(
+        ForeignKey("weather_alerts.id", ondelete="RESTRICT"), nullable=False
+    )
+    reviewer_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    previous_status: Mapped[str] = mapped_column(String(24), nullable=False)
+    new_status: Mapped[str] = mapped_column(String(24), nullable=False)
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False
+    )
+
+
+class AuditEvent(Base):
+    __tablename__ = "audit_events"
+    __table_args__ = (Index("ix_audit_target_created", "target_type", "target_id", "created_at"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    actor_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    action: Mapped[str] = mapped_column(String(80), nullable=False)
+    target_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    target_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    details: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, nullable=False
     )

@@ -25,17 +25,17 @@ def utc_iso(value: datetime) -> str:
 
 def validate_geojson_polygon(value: dict) -> dict:
     if value.get("type") != "Polygon" or set(value) - {"type", "coordinates"}:
-        raise ValueError("polygon must be a GeoJSON Polygon geometry")
+        raise ValueError("o polígono deve ser uma geometria GeoJSON do tipo Polygon")
     rings = value.get("coordinates")
     if not isinstance(rings, list) or not rings:
-        raise ValueError("polygon must contain at least one ring")
+        raise ValueError("o polígono deve conter pelo menos um anel")
     point_count = 0
     for ring in rings:
         if not isinstance(ring, list) or len(ring) < 4 or ring[0] != ring[-1]:
-            raise ValueError("every polygon ring must be closed and contain at least four points")
+            raise ValueError("cada anel deve ser fechado e conter pelo menos quatro pontos")
         for point in ring:
             if not isinstance(point, list) or len(point) != 2:
-                raise ValueError("polygon points must be [longitude, latitude] pairs")
+                raise ValueError("os pontos devem ser pares [longitude, latitude]")
             longitude, latitude = point
             if (
                 isinstance(longitude, bool)
@@ -47,10 +47,10 @@ def validate_geojson_polygon(value: dict) -> dict:
                 or not -180 <= longitude <= 180
                 or not -90 <= latitude <= 90
             ):
-                raise ValueError("polygon coordinates are outside valid geographic bounds")
+                raise ValueError("as coordenadas do polígono estão fora dos limites válidos")
             point_count += 1
             if point_count > 10_000:
-                raise ValueError("polygon cannot contain more than 10000 points")
+                raise ValueError("o polígono não pode conter mais de 10000 pontos")
     return value
 
 
@@ -77,13 +77,13 @@ class RegisterRequest(BaseModel):
     @classmethod
     def validate_password(cls, value: str) -> str:
         if not PASSWORD_PATTERN.match(value):
-            raise ValueError("use upper/lowercase letters, a number and a special character")
+            raise ValueError("use letras maiúsculas e minúsculas, número e caractere especial")
         return value
 
     @model_validator(mode="after")
     def location_pair(self):
         if bool(self.city) != bool(self.state):
-            raise ValueError("city and state must be supplied together")
+            raise ValueError("cidade e UF devem ser informadas juntas")
         return self
 
 
@@ -95,7 +95,7 @@ class LoginRequest(BaseModel):
 
 
 class StaffCreateRequest(RegisterRequest):
-    role: Literal["USER", "METEOROLOGIST"]
+    role: Literal["METEOROLOGIST"]
 
 
 class RoleUpdateRequest(BaseModel):
@@ -156,18 +156,20 @@ class ProfileUpdate(BaseModel):
     def validate_pairs(self):
         supplied = self.model_fields_set
         if "name" in supplied and self.name is None:
-            raise ValueError("name cannot be null")
+            raise ValueError("o nome não pode ser nulo")
         if "city" in supplied or "state" in supplied:
             if not {"city", "state"}.issubset(supplied) or bool(self.city) != bool(self.state):
-                raise ValueError("city and state must be supplied together or both cleared")
+                raise ValueError("cidade e UF devem ser informadas juntas ou ambas removidas")
         if "latitude" in supplied or "longitude" in supplied:
             if not {"latitude", "longitude"}.issubset(supplied) or (
                 (self.latitude is None) != (self.longitude is None)
             ):
-                raise ValueError("latitude and longitude must be supplied together or both cleared")
+                raise ValueError(
+                    "latitude e longitude devem ser informadas juntas ou ambas removidas"
+                )
         for field in ("weather_notifications", "alert_sound", "dark_theme"):
             if field in supplied and getattr(self, field) is None:
-                raise ValueError(f"{field} cannot be null")
+                raise ValueError(f"{field} não pode ser nulo")
         return self
 
 
@@ -204,13 +206,19 @@ class AlertOut(BaseModel):
     area_name: str
     recommendations: list[str]
     is_demo: bool
+    origin: str
+    source_name: str
+    source_url: str | None
+    validation_status: str
+    status_reason: str | None
+    status_changed_at: datetime | None
     issued_at: datetime
     valid_until: datetime
     is_read: bool = False
 
-    @field_serializer("issued_at", "valid_until")
-    def serialize_datetimes(self, value: datetime) -> str:
-        return utc_iso(value)
+    @field_serializer("issued_at", "valid_until", "status_changed_at")
+    def serialize_datetimes(self, value: datetime | None) -> str | None:
+        return utc_iso(value) if value else None
 
 
 class AlertCreateRequest(BaseModel):
@@ -229,26 +237,66 @@ class AlertCreateRequest(BaseModel):
     issued_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     valid_until: datetime
 
+    @field_validator("title", "message", "area_name", mode="before")
+    @classmethod
+    def clean_required_text(cls, value: object) -> object:
+        return value.strip() if isinstance(value, str) else value
+
+    @field_validator("issued_at", "valid_until")
+    @classmethod
+    def require_aware_datetime(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("informe data e hora com fuso horário")
+        return value.astimezone(UTC)
+
     @field_validator("recommendations")
     @classmethod
     def validate_recommendations(cls, values: list[str]) -> list[str]:
         cleaned = [" ".join(value.split()) for value in values if value.strip()]
         if not cleaned or any(len(value) > 300 for value in cleaned):
-            raise ValueError("recommendations must contain text up to 300 characters")
+            raise ValueError("as recomendações devem conter textos de até 300 caracteres")
         return cleaned
 
     @model_validator(mode="after")
     def validate_area_and_time(self):
         if self.valid_until <= self.issued_at:
-            raise ValueError("valid_until must be after issued_at")
+            raise ValueError("a validade deve ser posterior à emissão")
         has_circle = all(
             value is not None for value in (self.latitude, self.longitude, self.radius_km)
         )
         if self.polygon:
             self.polygon = validate_geojson_polygon(self.polygon)
         elif not has_circle:
-            raise ValueError("provide a polygon or latitude, longitude and radius_km")
+            raise ValueError("informe um polígono ou latitude, longitude e raio em km")
         return self
+
+
+class AlertReviewRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    validation_status: Literal["ACTIVE", "FALSE_ALARM", "NEEDS_CORRECTION"]
+    reason: str = Field(min_length=10, max_length=2000)
+
+    @field_validator("reason", mode="before")
+    @classmethod
+    def clean_reason(cls, value: object) -> object:
+        return " ".join(value.split()) if isinstance(value, str) else value
+
+
+class AlertReviewOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    alert_id: int
+    reviewer_id: int
+    previous_status: str
+    new_status: str
+    reason: str
+    created_at: datetime
+
+    @field_serializer("created_at")
+    def serialize_created_at(self, value: datetime) -> str:
+        return utc_iso(value)
 
 
 class HomeOut(BaseModel):
@@ -268,6 +316,10 @@ class MapAlertOut(BaseModel):
     radius_km: Decimal | None
     polygon: dict | None
     is_demo: bool
+    origin: str
+    source_name: str
+    source_url: str | None
+    validation_status: str
     issued_at: datetime
     valid_until: datetime
 
@@ -334,7 +386,7 @@ class WeatherReportCreateRequest(BaseModel):
     def occurrence_not_in_future(cls, value: datetime) -> datetime:
         normalized = value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
         if normalized > datetime.now(UTC):
-            raise ValueError("occurred_at cannot be in the future")
+            raise ValueError("a data da ocorrência não pode estar no futuro")
         return normalized
 
 
@@ -371,3 +423,12 @@ class WeatherReportOut(BaseModel):
 
 class MessageOut(BaseModel):
     message: str
+
+
+class InmetWarningSyncOut(BaseModel):
+    synced: bool
+    using_stored_data: bool
+    message: str
+    imported: int
+    skipped: int
+    stored_active_alerts: int

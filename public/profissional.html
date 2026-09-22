@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PrevClima - Painel profissional</title>
+  <link rel="stylesheet" href="/assets/css/styles.css">
+  <script src="/assets/js/api.js" defer></script>
+  <script src="/assets/js/shell.js" defer></script>
+  <script src="/assets/js/professional.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/profissional.html"><span class="brand-mark">&#9889;</span> Prev<span>Clima</span></a>
+    <nav class="desktop-nav" data-role-navigation aria-label="Navegação principal"></nav>
+    <span class="role-identity" data-role-identity></span>
+  </header>
+  <main class="professional-shell">
+    <header class="professional-heading">
+      <div><span class="eyebrow">Operação meteorológica</span><h1>Painel profissional</h1><p class="muted">Emita alertas diretos e revise relatos enviados pela comunidade.</p></div>
+      <button id="professional-logout" class="button secondary compact-button" type="button">Sair</button>
+    </header>
+    <div class="stats-row">
+      <article class="stat-card"><span class="muted">Alertas ativos</span><strong id="active-alert-total">--</strong></article>
+      <article class="stat-card"><span class="muted">Relatos pendentes</span><strong id="pending-report-total">--</strong></article>
+      <article class="stat-card"><span class="muted">Sessão</span><strong id="professional-role">--</strong></article>
+    </div>
+    <div class="dashboard-grid">
+      <section class="dashboard-panel">
+        <div class="dashboard-panel-header"><div><h2>Emitir alerta</h2><p class="muted">O alerta publicado é permanente e não poderá ser editado ou excluído.</p></div></div>
+        <form id="alert-form">
+          <div class="form-grid">
+            <div class="field span-2"><label for="alert-title">Título</label><input id="alert-title" maxlength="140" required></div>
+            <div class="field"><label for="event-type">Evento</label><select id="event-type" required><option value="SEVERE_STORM">Tempestade severa</option><option value="TORNADO">Tornado</option><option value="WINDSTORM">Vendaval</option><option value="HEAVY_RAIN">Chuva intensa</option></select></div>
+            <div class="field"><label for="severity">Gravidade</label><select id="severity" required><option value="MODERATE">Moderado</option><option value="HIGH">Alto</option><option value="CRITICAL">Crítico</option><option value="LOW">Baixo</option></select></div>
+            <div class="field span-2"><label for="area-name">Área afetada</label><input id="area-name" maxlength="160" placeholder="Ex.: Litoral Sul de São Paulo" required></div>
+            <div class="field span-2"><label for="alert-message">Descrição do risco</label><textarea id="alert-message" minlength="10" maxlength="5000" required></textarea></div>
+            <div class="field"><label for="alert-latitude">Latitude central</label><input id="alert-latitude" type="number" min="-90" max="90" step="any" required></div>
+            <div class="field"><label for="alert-longitude">Longitude central</label><input id="alert-longitude" type="number" min="-180" max="180" step="any" required></div>
+            <div class="field"><label for="radius-km">Raio (km)</label><input id="radius-km" type="number" min="0.1" max="1000" step="0.1" required></div>
+            <div class="field"><label for="valid-until">Válido até</label><input id="valid-until" type="datetime-local" required></div>
+            <div class="field span-2"><label for="recommendations">Recomendações</label><textarea id="recommendations" placeholder="Uma recomendação por linha" required></textarea></div>
+          </div>
+          <p id="alert-form-message" class="error" role="status"></p>
+          <button class="button" type="submit">Publicar alerta</button>
+        </form>
+      </section>
+      <section class="dashboard-panel">
+        <div class="dashboard-panel-header"><div><h2>Relatos para análise</h2><p class="muted">Aprovar ou rejeitar conclui a revisão.</p></div><button id="refresh-reports" class="button secondary" type="button">Atualizar</button></div>
+        <div id="review-queue" class="dashboard-list" aria-live="polite"><p class="loading">Carregando relatos...</p></div>
+      </section>
+    </div>
+    <section class="dashboard-panel full-panel">
+      <div class="dashboard-panel-header">
+        <div><h2>Qualidade dos avisos</h2><p class="muted">Marque um aviso como alarme falso ou como pendente de correção. A decisão fica registrada no histórico.</p></div>
+        <div class="inline-actions">
+          <button id="sync-inmet" class="button secondary" type="button">Sincronizar INMET</button>
+          <button id="refresh-alert-review" class="button secondary" type="button">Atualizar</button>
+        </div>
+      </div>
+      <p id="alert-review-message" class="helper" role="status"></p>
+      <div id="alert-review-list" class="dashboard-list" aria-live="polite"><p class="loading">Carregando avisos...</p></div>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", async () => {
   const status = document.querySelector("#map-status");
   if (typeof window.L === "undefined") {
-    status.textContent = "Mapa indisponivel";
+    status.textContent = "Mapa indisponível";
     return;
   }
 
@@ -16,13 +16,26 @@ document.addEventListener("DOMContentLoaded", async () => {
   const alertLayer = L.layerGroup().addTo(map);
   const forecastLayer = L.layerGroup().addTo(map);
 
-  function popup(title, subtitle, demo) {
+  function popup(title, subtitle, demo, sourceName, sourceUrl) {
     const node = document.createElement("div");
     const heading = document.createElement("strong");
     const detail = document.createElement("p");
     heading.textContent = `${demo ? "DEMO - " : ""}${title}`;
     detail.textContent = subtitle;
     node.append(heading, detail);
+    if (sourceName) {
+      const source = document.createElement("p");
+      source.textContent = `Origem: ${sourceName}`;
+      node.append(source);
+    }
+    if (sourceUrl && sourceUrl.startsWith("https://")) {
+      const link = document.createElement("a");
+      link.href = sourceUrl;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.textContent = "Fonte oficial";
+      node.append(link);
+    }
     return node;
   }
 
@@ -35,7 +48,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const data = await PrevClima.request("/map-data");
     data.forecast_areas.forEach((area) => {
       L.geoJSON(area.polygon, { style: polygonOptions(area.severity, 0.2) })
-        .bindPopup(popup(`Previsao: ${area.city}, ${area.state}`, area.source_name, false))
+        .bindPopup(popup(`Previsão: ${area.city}, ${area.state}`, area.source_name, false))
         .addTo(forecastLayer);
     });
     data.alerts.forEach((alert) => {
@@ -48,7 +61,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           radius: Number(alert.radius_km) * 1000,
         });
       }
-      if (shape) shape.bindPopup(popup(alert.title, alert.area_name, alert.is_demo)).addTo(alertLayer);
+      if (shape) shape.bindPopup(popup(alert.title, alert.area_name, alert.is_demo, alert.source_name, alert.source_url)).addTo(alertLayer);
     });
     status.textContent = `${data.alerts.length} alerta${data.alerts.length === 1 ? "" : "s"}`;
   } catch (error) {

@@ -13,7 +13,7 @@ from app.schemas import (
     WeatherReportReviewRequest,
 )
 
-router = APIRouter(tags=["content and reports"])
+router = APIRouter(tags=["conteudo e relatos"])
 
 
 @router.get("/education", response_model=list[EducationalContentOut])
@@ -75,7 +75,7 @@ def list_my_weather_reports(
 @router.get("/reports/review-queue", response_model=list[WeatherReportOut])
 def report_review_queue(
     db: DbSession,
-    _: Annotated[User, Depends(require_roles("METEOROLOGIST", "OWNER"))],
+    _: Annotated[User, Depends(require_roles("METEOROLOGIST"))],
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0, le=10_000),
 ):
@@ -95,7 +95,7 @@ def review_weather_report(
     report_id: int,
     payload: WeatherReportReviewRequest,
     db: DbSession,
-    user: Annotated[User, Depends(require_roles("METEOROLOGIST", "OWNER"))],
+    user: Annotated[User, Depends(require_roles("METEOROLOGIST"))],
 ):
     result = db.execute(
         update(WeatherReport)
@@ -110,7 +110,9 @@ def review_weather_report(
     if result.rowcount != 1:
         db.rollback()
         if not db.get(WeatherReport, report_id):
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Report not found")
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Report already reviewed")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Relato não encontrado"
+            )
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Relato já revisado")
     db.commit()
     return db.get(WeatherReport, report_id)

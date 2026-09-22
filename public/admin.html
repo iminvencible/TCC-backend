@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PrevClima - Administração de contas</title>
+  <link rel="stylesheet" href="/assets/css/styles.css">
+  <script src="/assets/js/api.js" defer></script>
+  <script src="/assets/js/shell.js" defer></script>
+  <script src="/assets/js/admin.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/inicio.html"><span class="brand-mark">&#9889;</span> Prev<span>Clima</span></a>
+    <nav class="desktop-nav" data-role-navigation aria-label="Navegação principal"></nav>
+    <span class="role-identity" data-role-identity></span>
+  </header>
+  <main class="professional-shell">
+    <header class="professional-heading">
+      <div><span class="eyebrow">Administração</span><h1>Contas e permissões</h1><p class="muted">Crie meteorologistas e desative contas com rastreabilidade.</p></div>
+      <button id="admin-logout" class="button secondary compact-button" type="button">Sair</button>
+    </header>
+    <div class="dashboard-grid">
+      <section class="dashboard-panel">
+        <div class="dashboard-panel-header"><div><h2>Criar conta</h2><p class="muted">A senha temporária deve ser enviada por um canal seguro.</p></div></div>
+        <form id="staff-form">
+          <div class="field"><label for="staff-name">Nome completo</label><input id="staff-name" minlength="2" maxlength="120" required></div>
+          <div class="field"><label for="staff-email">E-mail</label><input id="staff-email" type="email" autocomplete="off" required></div>
+          <div class="field"><label for="staff-password">Senha temporária</label><input id="staff-password" type="password" minlength="8" maxlength="128" autocomplete="new-password" required><span class="helper">Use maiúscula, minúscula, número e símbolo.</span></div>
+          <input id="staff-role" type="hidden" value="METEOROLOGIST">
+          <p id="staff-message" class="error" role="status"></p>
+          <button class="button" type="submit">Criar conta</button>
+        </form>
+      </section>
+      <section class="dashboard-panel">
+        <div class="dashboard-panel-header"><div><h2>Contas ativas</h2><p class="muted">Pesquise por nome, e-mail ou código.</p></div></div>
+        <form id="user-search-form" class="search-row"><input id="user-search" placeholder="Nome, e-mail ou código"><button class="button" type="submit">Pesquisar</button></form>
+        <p id="users-message" class="error" role="status"></p>
+        <div id="users-list" class="dashboard-list" aria-live="polite"><p class="loading">Carregando contas...</p></div>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

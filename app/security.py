@@ -18,7 +18,12 @@ def verify_password(password: str, encoded: str) -> bool:
     return password_hash.verify(password, encoded)
 
 
-def create_access_token(user_id: int, token_version: int) -> str:
+def create_access_token(
+    user_id: int,
+    token_version: int,
+    *,
+    audience: str = "prevclima-web",
+) -> str:
     settings = get_settings()
     now = datetime.now(UTC)
     payload = {
@@ -26,7 +31,7 @@ def create_access_token(user_id: int, token_version: int) -> str:
         "tv": token_version,
         "type": "access",
         "iss": "prevclima",
-        "aud": "prevclima-web",
+        "aud": audience,
         "iat": now,
         "exp": now + timedelta(minutes=settings.jwt_ttl_minutes),
     }
@@ -38,7 +43,7 @@ def decode_access_token(token: str) -> dict:
         token,
         get_settings().jwt_secret,
         algorithms=["HS256"],
-        audience="prevclima-web",
+        audience=["prevclima-web", "prevclima-mobile"],
         issuer="prevclima",
     )
 

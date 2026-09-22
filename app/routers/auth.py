@@ -5,13 +5,13 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app.config import get_settings
-from app.dependencies import CurrentUser, DbSession
+from app.dependencies import CurrentUser, DbSession, MobileUser
 from app.models import Role, User
 from app.schemas import AuthResponse, LoginRequest, MessageOut, RegisterRequest
 from app.security import create_access_token, create_csrf_token, hash_password, verify_password
 from app.services import user_out
 
-router = APIRouter(prefix="/auth", tags=["authentication"])
+router = APIRouter(prefix="/auth", tags=["autenticacao"])
 DUMMY_PASSWORD_HASH = hash_password("NotARealPassword123!")
 
 
@@ -26,12 +26,17 @@ def new_public_code(db: DbSession) -> str:
             return code
 
 
-def set_auth_cookies(response: Response, user: User) -> str:
+def set_auth_cookies(
+    response: Response,
+    user: User,
+    *,
+    audience: str = "prevclima-web",
+) -> str:
     settings = get_settings()
     csrf = create_csrf_token()
     response.set_cookie(
         "prevclima_access",
-        create_access_token(user.id, user.token_version),
+        create_access_token(user.id, user.token_version, audience=audience),
         max_age=settings.jwt_ttl_minutes * 60,
         httponly=True,
         secure=settings.cookie_secure,
@@ -54,11 +59,11 @@ def set_auth_cookies(response: Response, user: User) -> str:
 def register(payload: RegisterRequest, response: Response, db: DbSession):
     email = normalized_email(str(payload.email))
     if db.scalar(select(User.id).where(User.email == email)):
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="E-mail já cadastrado")
 
     role = db.scalar(select(Role).where(Role.code == "USER"))
     if not role:
-        raise HTTPException(status_code=503, detail="Database roles are not initialized")
+        raise HTTPException(status_code=503, detail="As funções de acesso não foram inicializadas")
 
     user = User(
         public_code=new_public_code(db),
@@ -75,11 +80,16 @@ def register(payload: RegisterRequest, response: Response, db: DbSession):
     except IntegrityError as error:
         db.rollback()
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="Email already registered"
+            status_code=status.HTTP_409_CONFLICT, detail="E-mail já cadastrado"
         ) from error
     db.refresh(user)
     csrf = set_auth_cookies(response, user)
     return AuthResponse(user=user_out(user), csrf_token=csrf)
+
+
+@router.get("/mobile-session", response_model=AuthResponse)
+def mobile_session(user: MobileUser):
+    return AuthResponse(user=user_out(user), csrf_token="")
 
 
 @router.post("/login", response_model=AuthResponse)
@@ -89,13 +99,25 @@ def login(payload: LoginRequest, response: Response, db: DbSession):
     return AuthResponse(user=user_out(user), csrf_token=csrf)
 
 
+@router.post("/login-mobile", response_model=AuthResponse)
+def login_mobile(payload: LoginRequest, response: Response, db: DbSession):
+    user = authenticate(payload, db)
+    if user.role.code != "USER":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Este acesso é exclusivo para contas de usuário",
+        )
+    csrf = set_auth_cookies(response, user, audience="prevclima-mobile")
+    return AuthResponse(user=user_out(user), csrf_token=csrf)
+
+
 def authenticate(payload: LoginRequest, db: DbSession) -> User:
     user = db.scalar(select(User).where(User.email == normalized_email(str(payload.email))))
     encoded = user.password_hash if user else DUMMY_PASSWORD_HASH
     password_is_valid = verify_password(payload.password, encoded)
     if not user or not user.is_active or not password_is_valid:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="E-mail ou senha inválidos"
         )
     return user
 
@@ -103,9 +125,9 @@ def authenticate(payload: LoginRequest, db: DbSession) -> User:
 @router.post("/login-professional", response_model=AuthResponse)
 def login_professional(payload: LoginRequest, response: Response, db: DbSession):
     user = authenticate(payload, db)
-    if user.role.code not in {"METEOROLOGIST", "OWNER"}:
+    if user.role.code not in {"METEOROLOGIST", "ADMIN"}:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Professional access required"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Acesso profissional necessário"
         )
     csrf = set_auth_cookies(response, user)
     return AuthResponse(user=user_out(user), csrf_token=csrf)
@@ -117,7 +139,7 @@ def logout(response: Response, user: CurrentUser, db: DbSession):
     db.commit()
     response.delete_cookie("prevclima_access", path="/")
     response.delete_cookie("prevclima_csrf", path="/")
-    return MessageOut(message="Signed out")
+    return MessageOut(message="Sessão encerrada")
 
 
 @router.get("/me", response_model=AuthResponse)

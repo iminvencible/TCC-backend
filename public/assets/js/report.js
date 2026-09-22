@@ -13,7 +13,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!items.length) {
       const empty = document.createElement("p");
       empty.className = "empty";
-      empty.textContent = "Voce ainda nao enviou relatos.";
+      empty.textContent = "Você ainda não enviou relatos.";
       history.append(empty);
       return;
     }
@@ -24,7 +24,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const description = document.createElement("p");
       const date = document.createElement("small");
       status.className = `report-status status-${item.status.toLowerCase()}`;
-      status.textContent = item.status === "PENDING" ? "Em analise" : item.status === "APPROVED" ? "Aprovado" : "Rejeitado";
+      status.textContent = item.status === "PENDING" ? "Em análise" : item.status === "APPROVED" ? "Aprovado" : "Rejeitado";
       description.textContent = item.description;
       date.textContent = new Date(item.occurred_at).toLocaleString("pt-BR");
       article.append(status, description, date);
@@ -53,17 +53,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   document.querySelector("#use-location").addEventListener("click", () => {
     if (!navigator.geolocation) {
-      message.textContent = "Geolocalizacao indisponivel neste navegador.";
+      message.textContent = "Geolocalização indisponível neste navegador.";
       return;
     }
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
         form.latitude.value = coords.latitude.toFixed(6);
         form.longitude.value = coords.longitude.toFixed(6);
-        message.textContent = "Localizacao preenchida.";
+        message.textContent = "Localização preenchida.";
         message.className = "success";
       },
-      () => { message.textContent = "Nao foi possivel obter sua localizacao."; },
+      () => { message.textContent = "Não foi possível obter sua localização."; },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 },
     );
   });
@@ -86,7 +86,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }),
       });
       message.className = "success";
-      message.textContent = "Relato enviado para analise.";
+      message.textContent = "Relato enviado para análise.";
       form.description.value = "";
       form.elements["image-url"].value = "";
       await loadHistory();

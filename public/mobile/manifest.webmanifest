@@ -1,0 +1,14 @@
+{
+  "name": "PrevClima Móvel",
+  "short_name": "PrevClima",
+  "description": "Avisos meteorológicos para contas de usuário PrevClima.",
+  "lang": "pt-BR",
+  "start_url": "/mobile/",
+  "scope": "/mobile/",
+  "display": "standalone",
+  "background_color": "#00132f",
+  "theme_color": "#063b91",
+  "icons": [
+    { "src": "/mobile/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

@@ -1,4 +1,25 @@
 (function () {
+  const errorMessages = {
+    "Authentication required": "Entre na sua conta para continuar.",
+    "Insufficient permission": "Sua conta não tem permissão para realizar esta ação.",
+    "Email already registered": "Este e-mail já está cadastrado.",
+    "Invalid email or password": "E-mail ou senha inválidos.",
+    "Professional access required": "Esta área é exclusiva para contas profissionais.",
+    "Database roles are not initialized": "Os perfis de acesso ainda não foram configurados.",
+    "Report not found": "Relato não encontrado.",
+    "Report already reviewed": "Este relato já foi analisado.",
+    "Alert not found": "Alerta não encontrado.",
+    "No current forecast": "Não há previsão atual para esta localidade.",
+    "User not found": "Usuário não encontrado.",
+    "Invalid CSRF token": "A sessão expirou. Atualize a página e tente novamente.",
+    "city and state must be supplied together": "Informe a cidade e a UF juntas.",
+    "city and state must be supplied together or both cleared": "Informe a cidade e a UF juntas ou apague os dois campos.",
+    "latitude and longitude must be supplied together": "Informe latitude e longitude juntas.",
+    "latitude and longitude must be supplied together or both cleared": "Informe latitude e longitude juntas ou apague os dois campos.",
+    "use upper/lowercase letters, a number and a special character": "Use letras maiúsculas e minúsculas, um número e um símbolo.",
+    "occurred_at cannot be in the future": "A data da ocorrência não pode estar no futuro.",
+  };
+
   function cookie(name) {
     const prefix = `${encodeURIComponent(name)}=`;
     const item = document.cookie.split("; ").find((part) => part.startsWith(prefix));
@@ -14,18 +35,28 @@
       if (csrf) headers.set("X-CSRF-Token", csrf);
     }
 
-    const response = await fetch(`/api/v1${path}`, {
-      ...options,
-      method,
-      headers,
-      credentials: "same-origin",
-    });
+    let response;
+    try {
+      response = await fetch(`/api/v1${path}`, {
+        ...options,
+        method,
+        headers,
+        credentials: "same-origin",
+      });
+    } catch (_error) {
+      const error = new Error("Não foi possível conectar ao PrevClima. Verifique sua conexão.");
+      error.status = 0;
+      throw error;
+    }
     const data = response.status === 204 ? null : await response.json().catch(() => null);
     if (!response.ok) {
       const detail = data && data.detail;
-      const message = Array.isArray(detail)
+      const rawMessage = Array.isArray(detail)
         ? detail.map((item) => item.msg).join(". ")
-        : detail || "Nao foi possivel concluir a solicitacao.";
+        : detail;
+      const message = errorMessages[rawMessage]
+        || rawMessage
+        || "Não foi possível concluir a solicitação.";
       const error = new Error(message);
       error.status = response.status;
       throw error;
@@ -44,5 +75,41 @@
     if (user) document.documentElement.classList.toggle("light", !user.dark_theme);
   }
 
-  window.PrevClima = { request, setBusy, applyTheme };
+  function roleName(role) {
+    return {
+      USER: "Usuário",
+      METEOROLOGIST: "Meteorologista",
+      ADMIN: "Administrador",
+    }[role] || role;
+  }
+
+  function severityName(severity) {
+    return {
+      LOW: "Baixo",
+      MODERATE: "Moderado",
+      HIGH: "Alto",
+      CRITICAL: "Crítico",
+    }[severity] || severity;
+  }
+
+  function eventName(eventType) {
+    return {
+      SEVERE_STORM: "Tempestade severa",
+      TORNADO: "Tornado",
+      WINDSTORM: "Vendaval",
+      HEAVY_RAIN: "Chuva intensa",
+    }[eventType] || eventType;
+  }
+
+  function relativeTime(value) {
+    const difference = new Date(value).getTime() - Date.now();
+    const minutes = Math.round(difference / 60000);
+    const formatter = new Intl.RelativeTimeFormat("pt-BR", { numeric: "auto" });
+    if (Math.abs(minutes) < 60) return formatter.format(minutes, "minute");
+    const hours = Math.round(minutes / 60);
+    if (Math.abs(hours) < 24) return formatter.format(hours, "hour");
+    return formatter.format(Math.round(hours / 24), "day");
+  }
+
+  window.PrevClima = { request, setBusy, applyTheme, roleName, severityName, eventName, relativeTime };
 })();

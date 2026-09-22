@@ -9,9 +9,9 @@ from app.models import EducationalContent, Forecast, Role, User, WeatherAlert
 from app.security import hash_password
 
 ROLES = {
-    "USER": "Usuario",
+    "USER": "Usuário",
     "METEOROLOGIST": "Meteorologista",
-    "OWNER": "Administrador",
+    "ADMIN": "Administrador",
 }
 
 
@@ -36,7 +36,7 @@ def ensure_user(db, roles, *, email: str | None, password: str | None, role: str
     user = db.scalar(select(User).where(User.email == email))
     if user:
         if user.role_id != roles[role].id or not user.is_active:
-            raise RuntimeError(f"Seed account {email} exists with an unexpected role or state")
+            raise RuntimeError(f"A conta de seed {email} possui funcao ou estado inesperado")
         return user
     user = User(
         public_code=f"DEMO-{role[:4]}-{len(email):04d}",
@@ -143,7 +143,13 @@ def ensure_demo_weather(db, meteorologist: User | None):
         alert = db.scalar(select(WeatherAlert).where(WeatherAlert.source_key == data["source_key"]))
         if alert:
             continue
-        alert = WeatherAlert(source_key=data["source_key"], is_demo=True)
+        alert = WeatherAlert(
+            source_key=data["source_key"],
+            is_demo=True,
+            origin="DEMO",
+            source_name="PrevClima - demonstracao",
+            validation_status="ACTIVE",
+        )
         db.add(alert)
         for key, value in data.items():
             setattr(alert, key, value)
@@ -213,10 +219,10 @@ def main():
             ensure_user(
                 db,
                 roles,
-                email=settings.seed_owner_email,
-                password=settings.seed_owner_password,
-                role="OWNER",
-                name="Proprietario Demo",
+                email=settings.seed_admin_email,
+                password=settings.seed_admin_password,
+                role="ADMIN",
+                name="Administrador Demo",
             )
             meteorologist = ensure_user(
                 db,

@@ -15,12 +15,14 @@ document.addEventListener("DOMContentLoaded", () => {
       document.querySelector("#wind").textContent = `${Number(forecast.wind_kmh)} km/h`;
       document.querySelector("#rain").textContent = `${forecast.rain_probability}%`;
       document.querySelector("#data-source").textContent = forecast.source_name;
+      document.querySelector("#updated-at").textContent = `Atualizado ${PrevClima.relativeTime(forecast.issued_at)}`;
     } else {
-      document.querySelector("#condition").textContent = "Sem previsao cadastrada para esta localidade";
+      document.querySelector("#condition").textContent = "Sem previsão cadastrada para esta localidade";
       ["temperature", "max-temperature", "min-temperature", "humidity", "wind", "rain"].forEach((id) => {
         document.querySelector(`#${id}`).textContent = "--";
       });
       document.querySelector("#data-source").textContent = "";
+      document.querySelector("#updated-at").textContent = "";
     }
 
     const first = data.active_alerts[0];
@@ -29,7 +31,11 @@ document.addEventListener("DOMContentLoaded", () => {
       : "Sem alertas ativos";
     document.querySelector("#warning-message").textContent = first
       ? first.message
-      : "Nenhum alerta meteorologico esta ativo no momento.";
+      : "Nenhum alerta meteorológico está ativo no momento.";
+    document.querySelector("#warning-source").textContent = first
+      ? `Origem: ${first.source_name}`
+      : "";
+    document.querySelector("#demo-chip").hidden = !(first && first.is_demo);
     document.querySelector("#alert-badge").textContent = data.unread_alert_count || "";
   }
 
@@ -58,7 +64,7 @@ document.addEventListener("DOMContentLoaded", () => {
         form.state.value = currentUser.state;
       }
     } catch (error) {
-      if (error.status !== 401) document.querySelector("#auth-state").textContent = "Indisponivel";
+      if (error.status !== 401) document.querySelector("#auth-state").textContent = "Indisponível";
     }
     await load(currentUser && currentUser.city, currentUser && currentUser.state);
   }

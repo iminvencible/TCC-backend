@@ -6,11 +6,13 @@
   <title>PrevClima - Perfil</title>
   <link rel="stylesheet" href="/assets/css/styles.css">
   <script src="/assets/js/api.js" defer></script>
+  <script src="/assets/js/shell.js" defer></script>
   <script src="/assets/js/profile.js" defer></script>
 </head>
 <body>
   <header class="topbar">
     <a class="brand" href="/inicio.html"><span class="brand-mark">&#9889;</span> Prev<span>Clima</span></a>
+    <nav class="desktop-nav" data-role-navigation aria-label="Navegação principal"></nav>
   </header>
   <main class="app-shell profile-page">
     <section class="profile-summary profile-card-row">
@@ -18,7 +20,7 @@
       <div class="profile-copy"><h2 id="profile-name">Carregando...</h2><p id="profile-email" class="muted"></p><span id="profile-role" class="role-pill"></span><p id="profile-code" class="helper"></p></div>
     </section>
     <section class="settings-panel">
-      <div class="section-label">Localizacao</div>
+      <div class="section-label">Dados pessoais e localização</div>
       <form id="profile-form">
         <div class="field"><label for="name">Nome</label><input id="name" minlength="2" maxlength="120" required></div>
         <div class="form-row">
@@ -26,31 +28,31 @@
           <div class="field"><label for="state">UF</label><input id="state" maxlength="2" pattern="[A-Za-z]{2}"></div>
         </div>
         <p id="profile-message" class="error"></p>
-        <button class="button compact-button" type="submit">Alterar localizacao</button>
+        <button class="button compact-button" type="submit">Salvar perfil</button>
       </form>
     </section>
     <section class="settings-panel">
-      <div class="section-label">Notificacoes</div>
-      <label class="setting"><span><strong>Alertas meteorologicos</strong><br><small class="muted">Notificacoes de eventos ativos</small></span><input id="weather-notifications" type="checkbox"></label>
-      <label class="setting"><span><strong>Som de alertas</strong><br><small class="muted">Tocar audio ao receber alertas</small></span><input id="alert-sound" type="checkbox"></label>
+      <div class="section-label">Notificações</div>
+      <label class="setting"><span><strong>Alertas meteorológicos</strong><br><small class="muted">Notificações dentro do aplicativo</small></span><input id="weather-notifications" type="checkbox"></label>
+      <label class="setting"><span><strong>Som de alertas</strong><br><small class="muted">Tocar áudio ao receber alertas</small></span><input id="alert-sound" type="checkbox"></label>
     </section>
     <section class="settings-panel">
-      <div class="section-label">Aparencia</div>
+      <div class="section-label">Aparência</div>
       <label class="setting"><span><strong>Tema escuro</strong><br><small class="muted">Interface no modo noturno</small></span><input id="dark-theme" type="checkbox"></label>
     </section>
     <section class="settings-panel resource-links">
       <div class="section-label">Recursos</div>
-      <a class="setting" href="/informacoes.html"><strong>Informacoes educativas</strong><span aria-hidden="true">&#8250;</span></a>
+      <a class="setting" href="/informacoes.html"><strong>Informações educativas</strong><span aria-hidden="true">&#8250;</span></a>
       <a class="setting" href="/relato.html"><strong>Enviar relato de tempo</strong><span aria-hidden="true">&#8250;</span></a>
     </section>
     <button id="logout" class="button danger-button" type="button">Sair da conta</button>
   </main>
-  <nav class="bottom-nav" aria-label="Navegacao principal">
-    <a href="/inicio.html">&#8962;<span>Inicio</span></a>
+  <nav class="bottom-nav" aria-label="Navegação principal">
+    <a href="/inicio.html">&#8962;<span>Início</span></a>
     <a href="/alertas.html">!<span>Alertas</span></a>
-    <a class="nav-center" href="/inicio.html" aria-label="Previsao atual">&#9928;</a>
+    <a class="nav-center" href="/inicio.html" aria-label="Previsão atual">&#9928;</a>
     <a href="/mapa.html">&#9678;<span>Mapa</span></a>
-    <a class="active" href="/perfil.html">&#9679;<span>Perfil</span></a>
+    <a class="active" href="/perfil.html" aria-current="page">&#9679;<span>Perfil</span></a>
   </nav>
   <div id="toast" class="toast" role="status"></div>
 </body>

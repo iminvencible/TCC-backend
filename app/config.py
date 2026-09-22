@@ -13,12 +13,17 @@ class Settings(BaseSettings):
     cookie_secure: bool = False
     cors_origins: list[str] = ["http://localhost:8000"]
     seed_demo_data: bool = False
-    seed_owner_email: str | None = None
-    seed_owner_password: str | None = None
+    seed_admin_email: str | None = None
+    seed_admin_password: str | None = None
     seed_meteorologist_email: str | None = None
     seed_meteorologist_password: str | None = None
     seed_user_email: str | None = None
     seed_user_password: str | None = None
+    inmet_enabled: bool = False
+    inmet_warning_rss_url: str = "https://apiprevmet3.inmet.gov.br/avisos/rss"
+    inmet_timeout_seconds: float = 8.0
+    inmet_max_response_bytes: int = 2_000_000
+    inmet_user_agent: str = "PrevClima/0.1 (integracao academica)"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
@@ -36,15 +41,17 @@ class Settings(BaseSettings):
             self.jwt_secret == "development-secret-change-before-production"
             or len(self.jwt_secret) < 32
         ):
-            raise RuntimeError("Set a unique JWT_SECRET with at least 32 characters")
+            raise RuntimeError("Defina JWT_SECRET unico com pelo menos 32 caracteres")
         if not self.cookie_secure:
-            raise RuntimeError("COOKIE_SECURE must be enabled in production")
+            raise RuntimeError("COOKIE_SECURE deve estar habilitado em producao")
         if self.database_url.startswith("sqlite"):
-            raise RuntimeError("Configure a production database instead of SQLite")
+            raise RuntimeError("Configure um banco de producao em vez do SQLite")
         if "*" in self.cors_origins:
-            raise RuntimeError("Wildcard CORS origins are not allowed in production")
+            raise RuntimeError("Origem CORS curinga nao e permitida em producao")
         if self.seed_demo_data:
-            raise RuntimeError("SEED_DEMO_DATA must be disabled in production")
+            raise RuntimeError("SEED_DEMO_DATA deve estar desabilitado em producao")
+        if self.inmet_enabled and not self.inmet_warning_rss_url.startswith("https://"):
+            raise RuntimeError("A URL do INMET deve usar HTTPS em producao")
 
 
 @lru_cache

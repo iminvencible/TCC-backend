@@ -23,7 +23,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!items.length) {
       const empty = document.createElement("p");
       empty.className = "empty";
-      empty.textContent = "Nenhuma informacao foi publicada ainda.";
+      empty.textContent = "Nenhuma informação foi publicada ainda.";
       list.append(empty);
     } else items.forEach((item) => list.append(card(item)));
   } catch (error) {

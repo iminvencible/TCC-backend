@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="PrevClima">
+  <defs><linearGradient id="b" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#185dcc"/><stop offset="1" stop-color="#00132f"/></linearGradient></defs>
+  <rect width="512" height="512" rx="112" fill="url(#b)"/>
+  <path d="M146 300c-38 0-69-30-69-68 0-35 26-64 60-68 14-55 64-95 123-95 66 0 120 48 130 111 31 10 53 39 53 74 0 43-35 78-78 78H146z" fill="#d9e9ff"/>
+  <path d="M273 238l-66 112h57l-28 93 87-126h-59l39-79z" fill="#ffc226"/>
+</svg>

@@ -18,8 +18,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     PrevClima.applyTheme(user);
     document.querySelector("#profile-name").textContent = user.name;
     document.querySelector("#profile-email").textContent = user.email;
-    document.querySelector("#profile-role").textContent = user.role_name;
-    document.querySelector("#profile-code").textContent = `Codigo: ${user.public_code}`;
+    document.querySelector("#profile-role").textContent = PrevClima.roleName(user.role);
+    document.querySelector("#profile-code").textContent = `Código: ${user.public_code}`;
     form.name.value = user.name;
     form.city.value = user.city || "";
     form.state.value = user.state || "";
@@ -64,7 +64,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           method: "PATCH",
           body: JSON.stringify({ [field]: element.checked }),
         });
-        notify("Preferencia atualizada");
+        notify("Preferência atualizada");
       } catch (error) {
         element.checked = previous;
         notify(error.message);

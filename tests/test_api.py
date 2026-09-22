@@ -32,7 +32,7 @@ def test_register_login_and_profile(client: TestClient):
         "/api/v1/auth/register",
         json={
             "name": "Maria Teste",
-            "email": "Maria@Example.com",
+            "email": "Maria@Exemplo.com",
             "password": "Senha123!",
             "city": "Mongagua",
             "state": "sp",
@@ -40,7 +40,7 @@ def test_register_login_and_profile(client: TestClient):
     )
     assert registration.status_code == 201
     body = registration.json()
-    assert body["user"]["email"] == "maria@example.com"
+    assert body["user"]["email"] == "maria@exemplo.com"
     assert body["user"]["role"] == "USER"
     assert body["user"]["state"] == "SP"
     assert "prevclima_access" in client.cookies
@@ -51,7 +51,7 @@ def test_register_login_and_profile(client: TestClient):
 
     login = client.post(
         "/api/v1/auth/login",
-        json={"email": "MARIA@example.com", "password": "Senha123!"},
+        json={"email": "MARIA@exemplo.com", "password": "Senha123!"},
     )
     assert login.status_code == 200
     profile = client.get("/api/v1/users/me")
@@ -62,15 +62,15 @@ def test_register_login_and_profile(client: TestClient):
 def test_registration_rejects_weak_and_duplicate_password(client: TestClient):
     weak = client.post(
         "/api/v1/auth/register",
-        json={"name": "Weak User", "email": "weak@example.com", "password": "password"},
+        json={"name": "Usuário Fraco", "email": "fraco@exemplo.com", "password": "password"},
     )
     assert weak.status_code == 422
 
-    payload = {"name": "First User", "email": "same@example.com", "password": "Senha123!"}
+    payload = {"name": "Primeiro Usuário", "email": "igual@exemplo.com", "password": "Senha123!"}
     assert client.post("/api/v1/auth/register", json=payload).status_code == 201
     duplicate = client.post(
         "/api/v1/auth/register",
-        json={**payload, "email": "SAME@example.com"},
+        json={**payload, "email": "IGUAL@exemplo.com"},
     )
     assert duplicate.status_code == 409
 
@@ -78,7 +78,7 @@ def test_registration_rejects_weak_and_duplicate_password(client: TestClient):
         "/api/v1/auth/register",
         json={
             "name": "Role Spoof",
-            "email": "spoof@example.com",
+            "email": "falso@exemplo.com",
             "password": "Senha123!",
             "role": "OWNER",
         },
@@ -89,9 +89,9 @@ def test_registration_rejects_weak_and_duplicate_password(client: TestClient):
 def test_password_is_hashed(client: TestClient, db):
     client.post(
         "/api/v1/auth/register",
-        json={"name": "Hash Test", "email": "hash@example.com", "password": "Senha123!"},
+        json={"name": "Teste Hash", "email": "hash@exemplo.com", "password": "Senha123!"},
     )
-    user = db.scalar(select(User).where(User.email == "hash@example.com"))
+    user = db.scalar(select(User).where(User.email == "hash@exemplo.com"))
     assert user.password_hash != "Senha123!"
     assert user.password_hash.startswith("$argon2")
 
@@ -209,7 +209,7 @@ def test_report_submission_is_authenticated_owned_and_validated(
         "occurred_at": (datetime.now(UTC) - timedelta(minutes=5)).isoformat(),
         "latitude": -24.1,
         "longitude": -46.62,
-        "image_url": "https://example.com/granizo.jpg",
+        "image_url": "https://exemplo.com/granizo.jpg",
     }
     with TestClient(client.app) as anonymous:
         assert anonymous.post("/api/v1/reports", json=payload).status_code == 401
@@ -223,7 +223,7 @@ def test_report_submission_is_authenticated_owned_and_validated(
     assert own.status_code == 200
     assert [item["id"] for item in own.json()] == [created.json()["id"]]
     report = db.get(WeatherReport, created.json()["id"])
-    user = db.scalar(select(User).where(User.email == "maria@example.com"))
+    user = db.scalar(select(User).where(User.email == "maria@exemplo.com"))
     assert report.reporter_id == user.id
 
     future = registered_client.post(
@@ -301,7 +301,7 @@ def test_alerts_are_filtered_by_authenticated_location(registered_client: TestCl
 def test_professional_login_rejects_regular_user(registered_client: TestClient):
     response = registered_client.post(
         "/api/v1/auth/login-professional",
-        json={"email": "maria@example.com", "password": "Senha123!"},
+        json={"email": "maria@exemplo.com", "password": "Senha123!"},
     )
     assert response.status_code == 403
 
@@ -311,7 +311,7 @@ def test_professional_accounts_cannot_be_self_created(client: TestClient):
         "/api/v1/auth/register-meteorologist",
         json={
             "name": "Attacker",
-            "email": "attacker@example.com",
+            "email": "invasor@exemplo.com",
             "password": "Senha123!",
             "access_code": "PREV-ADMIN",
         },
@@ -334,10 +334,10 @@ def test_polygon_targeting_includes_boundary_and_excludes_holes():
     assert not point_in_polygon(12, 5, polygon)
 
 
-def test_only_owner_can_create_professional_accounts(registered_client: TestClient, db):
+def test_only_admin_can_create_professional_accounts(registered_client: TestClient, db):
     payload = {
         "name": "Meteorologista Teste",
-        "email": "meteo@example.com",
+        "email": "meteo@exemplo.com",
         "password": "Meteo123!",
         "role": "METEOROLOGIST",
         "city": "Santos",
@@ -348,21 +348,21 @@ def test_only_owner_can_create_professional_accounts(registered_client: TestClie
     )
     assert denied.status_code == 403
 
-    owner_role = db.scalar(select(Role).where(Role.code == "OWNER"))
+    admin_role = db.scalar(select(Role).where(Role.code == "ADMIN"))
     db.add(
         User(
-            public_code="TEST-OWNER",
-            name="Owner Test",
-            email="owner-test@example.com",
-            password_hash=hash_password("Owner123!"),
-            role_id=owner_role.id,
+            public_code="TEST-ADMIN",
+            name="Administrador Teste",
+            email="admin-teste@exemplo.com",
+            password_hash=hash_password("Admin123!"),
+            role_id=admin_role.id,
         )
     )
     db.commit()
     registered_client.cookies.clear()
     login = registered_client.post(
         "/api/v1/auth/login",
-        json={"email": "owner-test@example.com", "password": "Owner123!"},
+        json={"email": "admin-teste@exemplo.com", "password": "Admin123!"},
     )
     assert login.status_code == 200
     created = registered_client.post(
@@ -374,7 +374,7 @@ def test_only_owner_can_create_professional_accounts(registered_client: TestClie
     registered_client.cookies.clear()
     professional_login = registered_client.post(
         "/api/v1/auth/login-professional",
-        json={"email": "meteo@example.com", "password": "Meteo123!"},
+        json={"email": "meteo@exemplo.com", "password": "Meteo123!"},
     )
     assert professional_login.status_code == 200
     now = datetime.now(UTC)

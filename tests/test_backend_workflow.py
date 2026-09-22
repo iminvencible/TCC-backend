@@ -1,0 +1,346 @@
+from datetime import UTC, datetime, timedelta
+
+import httpx
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy import func, select
+
+from app.config import Settings
+from app.inmet_sync import sync_inmet_warnings
+from app.integrations.inmet import InmetClient, InmetError, parse_warning_feed
+from app.models import AlertReview, AuditEvent, Role, User, WeatherAlert
+from app.security import hash_password
+from tests.conftest import csrf_headers
+
+
+def add_user(db, *, email: str, role_code: str, public_code: str) -> User:
+    role = db.scalar(select(Role).where(Role.code == role_code))
+    user = User(
+        public_code=public_code,
+        name=f"Conta {role_code}",
+        email=email,
+        password_hash=hash_password("Senha123!"),
+        role_id=role.id,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+def test_mobile_login_accepts_only_regular_users(registered_client: TestClient, db):
+    add_user(
+        db,
+        email="meteorologista-mobile@exemplo.com",
+        role_code="METEOROLOGIST",
+        public_code="TEST-MOBILE-METEO",
+    )
+    denied = registered_client.post(
+        "/api/v1/auth/login-mobile",
+        json={"email": "meteorologista-mobile@exemplo.com", "password": "Senha123!"},
+    )
+    assert denied.status_code == 403
+    allowed = registered_client.post(
+        "/api/v1/auth/login-mobile",
+        json={"email": "maria@exemplo.com", "password": "Senha123!"},
+    )
+    assert allowed.status_code == 200
+    assert allowed.json()["user"]["role"] == "USER"
+    assert registered_client.get("/api/v1/auth/mobile-session").status_code == 200
+
+
+def test_meteorologist_review_is_audited_and_hides_flagged_alert(client: TestClient, db):
+    add_user(
+        db,
+        email="revisor@exemplo.com",
+        role_code="METEOROLOGIST",
+        public_code="TEST-REVIEWER",
+    )
+    assert (
+        client.post(
+            "/api/v1/auth/login-professional",
+            json={"email": "revisor@exemplo.com", "password": "Senha123!"},
+        ).status_code
+        == 200
+    )
+    alert_id = client.get("/api/v1/alerts").json()[0]["id"]
+    response = client.post(
+        f"/api/v1/alerts/{alert_id}/review",
+        headers=csrf_headers(client),
+        json={
+            "validation_status": "FALSE_ALARM",
+            "reason": "O aviso foi conferido e nao corresponde ao evento observado.",
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["validation_status"] == "FALSE_ALARM"
+    assert client.get("/api/v1/alerts").json() == []
+    review_queue = client.get("/api/v1/alerts/review-queue")
+    assert review_queue.status_code == 200
+    assert review_queue.json()[0]["validation_status"] == "FALSE_ALARM"
+    assert db.scalar(select(func.count(AlertReview.id))) == 1
+    assert (
+        db.scalar(select(func.count(AuditEvent.id)).where(AuditEvent.action == "ALERT_REVIEWED"))
+        == 1
+    )
+
+
+def test_admin_soft_delete_revokes_tokens_and_never_allows_self_delete(client: TestClient, db):
+    admin = add_user(
+        db,
+        email="admin@exemplo.com",
+        role_code="ADMIN",
+        public_code="TEST-ADMIN",
+    )
+    victim = add_user(
+        db,
+        email="vitima@exemplo.com",
+        role_code="USER",
+        public_code="TEST-VICTIM",
+    )
+    assert (
+        client.post(
+            "/api/v1/auth/login",
+            json={"email": "vitima@exemplo.com", "password": "Senha123!"},
+        ).status_code
+        == 200
+    )
+    old_access_token = client.cookies.get("prevclima_access")
+    client.cookies.clear()
+    assert (
+        client.post(
+            "/api/v1/auth/login",
+            json={"email": "admin@exemplo.com", "password": "Senha123!"},
+        ).status_code
+        == 200
+    )
+    assert (
+        client.delete(f"/api/v1/admin/users/{admin.id}", headers=csrf_headers(client)).status_code
+        == 409
+    )
+    assert (
+        client.delete(f"/api/v1/admin/users/{victim.id}", headers=csrf_headers(client)).status_code
+        == 200
+    )
+    db.refresh(victim)
+    assert victim.is_active is False
+    assert victim.token_version == 1
+    assert (
+        db.scalar(select(func.count(AuditEvent.id)).where(AuditEvent.action == "USER_DEACTIVATED"))
+        == 1
+    )
+    client.cookies.clear()
+    client.cookies.set("prevclima_access", old_access_token)
+    assert client.get("/api/v1/users/me").status_code == 401
+
+
+def test_admin_can_create_only_meteorologists(client: TestClient, db):
+    add_user(
+        db,
+        email="admin-criacao@exemplo.com",
+        role_code="ADMIN",
+        public_code="TEST-ADMIN-CREATE",
+    )
+    assert (
+        client.post(
+            "/api/v1/auth/login-professional",
+            json={"email": "admin-criacao@exemplo.com", "password": "Senha123!"},
+        ).status_code
+        == 200
+    )
+    base = {
+        "name": "Nova Meteorologista",
+        "email": "nova-meteorologista@exemplo.com",
+        "password": "Senha123!",
+        "city": None,
+        "state": None,
+    }
+    denied = client.post(
+        "/api/v1/admin/users",
+        headers=csrf_headers(client),
+        json={**base, "role": "USER"},
+    )
+    assert denied.status_code == 422
+    created = client.post(
+        "/api/v1/admin/users",
+        headers=csrf_headers(client),
+        json={**base, "role": "METEOROLOGIST"},
+    )
+    assert created.status_code == 201
+    assert created.json()["role"] == "METEOROLOGIST"
+    now = datetime.now(UTC)
+    direct_alert = client.post(
+        "/api/v1/alerts",
+        headers=csrf_headers(client),
+        json={
+            "title": "Aviso administrativo indevido",
+            "message": "A conta administrativa nao pode emitir este aviso.",
+            "event_type": "HEAVY_RAIN",
+            "severity": "HIGH",
+            "area_name": "Santos",
+            "latitude": -23.96,
+            "longitude": -46.33,
+            "radius_km": 20,
+            "recommendations": ["Procure abrigo"],
+            "issued_at": now.isoformat(),
+            "valid_until": (now + timedelta(hours=2)).isoformat(),
+        },
+    )
+    assert direct_alert.status_code == 403
+    assert client.get("/api/v1/reports/review-queue").status_code == 403
+    assert (
+        client.post(
+            "/api/v1/integrations/inmet/sync-warnings",
+            headers=csrf_headers(client),
+        ).status_code
+        == 403
+    )
+
+
+def test_mobile_pages_exist_and_mobile_login_blocks_admin(client: TestClient, db):
+    admin = add_user(
+        db,
+        email="admin-mobile@exemplo.com",
+        role_code="ADMIN",
+        public_code="TEST-ADMIN-MOBILE",
+    )
+    assert admin.role.code == "ADMIN"
+    assert client.get("/mobile/").status_code == 200
+    assert client.get("/mobile/inicio.html").status_code == 200
+    denied = client.post(
+        "/api/v1/auth/login-mobile",
+        json={"email": "admin-mobile@exemplo.com", "password": "Senha123!"},
+    )
+    assert denied.status_code == 403
+    assert (
+        client.post(
+            "/api/v1/auth/login",
+            json={"email": "admin-mobile@exemplo.com", "password": "Senha123!"},
+        ).status_code
+        == 200
+    )
+    assert client.get("/api/v1/auth/mobile-session").status_code == 403
+
+
+def inmet_xml() -> bytes:
+    now = datetime.now(UTC)
+    return f"""<?xml version="1.0" encoding="UTF-8"?>
+    <rss xmlns:cap="urn:oasis:names:tc:emergency:cap:1.2"><channel><item>
+      <guid>INMET-AVISO-123</guid><title>Aviso de tempestade</title>
+      <cap:headline>Aviso detalhado de tempestade</cap:headline>
+      <description>Chuva intensa e rajadas de vento.</description>
+      <link>https://avisos.inmet.gov.br/123</link>
+      <cap:event>Tempestade</cap:event><cap:severity>Severe</cap:severity>
+      <cap:effective>{(now - timedelta(minutes=10)).isoformat()}</cap:effective>
+      <cap:expires>{(now + timedelta(hours=2)).isoformat()}</cap:expires>
+      <cap:areaDesc>Litoral de Sao Paulo</cap:areaDesc>
+      <cap:polygon>-24.0,-46.8 -24.0,-46.2 -24.5,-46.2 -24.0,-46.8</cap:polygon>
+      <cap:instruction>Procure abrigo seguro.</cap:instruction>
+    </item></channel></rss>""".encode()
+
+
+def test_inmet_parser_and_sync_are_safe_attributed_and_idempotent(db):
+    parsed = parse_warning_feed(
+        inmet_xml(), source_url="https://apiprevmet3.inmet.gov.br/avisos/rss"
+    )
+    assert parsed[0].severity == "HIGH"
+    assert parsed[0].title == "Aviso detalhado de tempestade"
+    assert parsed[0].polygon["type"] == "Polygon"
+
+    transport = httpx.MockTransport(lambda _: httpx.Response(200, content=inmet_xml()))
+    settings = Settings(inmet_enabled=True)
+    client = InmetClient(settings, transport=transport)
+    assert sync_inmet_warnings(db, actor=None, client=client) == (1, 0)
+    assert sync_inmet_warnings(db, actor=None, client=client) == (0, 1)
+    warning = db.scalar(select(WeatherAlert).where(WeatherAlert.origin == "INMET"))
+    assert warning.source_name == "Instituto Nacional de Meteorologia (INMET)"
+    assert warning.source_url == "https://avisos.inmet.gov.br/123"
+    assert warning.validation_status == "ACTIVE"
+
+    cancellation = b"""<?xml version="1.0" encoding="UTF-8"?>
+    <rss xmlns:cap="urn:oasis:names:tc:emergency:cap:1.2"><channel><item>
+      <guid>INMET-CANCEL-456</guid>
+      <cap:msgType>Cancel</cap:msgType>
+      <cap:references>inmet.gov.br,INMET-AVISO-123,2026-09-21T10:00:00Z</cap:references>
+    </item></channel></rss>"""
+    cancel_transport = httpx.MockTransport(lambda _: httpx.Response(200, content=cancellation))
+    cancel_client = InmetClient(settings, transport=cancel_transport)
+    assert sync_inmet_warnings(db, actor=None, client=cancel_client) == (0, 1)
+    db.refresh(warning)
+    assert warning.validation_status == "FALSE_ALARM"
+
+
+def test_inmet_update_only_supersedes_after_replacement_is_importable(db):
+    settings = Settings(inmet_enabled=True)
+    original_client = InmetClient(
+        settings,
+        transport=httpx.MockTransport(lambda _: httpx.Response(200, content=inmet_xml())),
+    )
+    assert sync_inmet_warnings(db, actor=None, client=original_client) == (1, 0)
+    original = db.scalar(select(WeatherAlert).where(WeatherAlert.origin == "INMET"))
+
+    now = datetime.now(UTC)
+
+    def update_xml(*, polygon: bool) -> bytes:
+        polygon_node = (
+            "<cap:polygon>-24.1,-46.9 -24.1,-46.1 -24.6,-46.1 -24.1,-46.9</cap:polygon>"
+            if polygon
+            else ""
+        )
+        return f"""<?xml version="1.0" encoding="UTF-8"?>
+        <rss xmlns:cap="urn:oasis:names:tc:emergency:cap:1.2"><channel><item>
+          <guid>INMET-AVISO-ATUALIZADO-456</guid>
+          <title>Aviso atualizado</title><description>Área atualizada pelo INMET.</description>
+          <cap:msgType>Update</cap:msgType>
+          <cap:references>inmet.gov.br,INMET-AVISO-123,2026-09-21T10:00:00Z</cap:references>
+          <cap:event>Tempestade</cap:event><cap:severity>Severe</cap:severity>
+          <cap:effective>{now.isoformat()}</cap:effective>
+          <cap:expires>{(now + timedelta(hours=3)).isoformat()}</cap:expires>
+          <cap:areaDesc>Litoral atualizado</cap:areaDesc>{polygon_node}
+        </item></channel></rss>""".encode()
+
+    incomplete_client = InmetClient(
+        settings,
+        transport=httpx.MockTransport(
+            lambda _: httpx.Response(200, content=update_xml(polygon=False))
+        ),
+    )
+    assert sync_inmet_warnings(db, actor=None, client=incomplete_client) == (0, 1)
+    db.refresh(original)
+    assert original.validation_status == "ACTIVE"
+
+    complete_client = InmetClient(
+        settings,
+        transport=httpx.MockTransport(
+            lambda _: httpx.Response(200, content=update_xml(polygon=True))
+        ),
+    )
+    assert sync_inmet_warnings(db, actor=None, client=complete_client) == (1, 0)
+    db.refresh(original)
+    assert original.validation_status == "NEEDS_CORRECTION"
+    active = db.scalar(
+        select(WeatherAlert).where(
+            WeatherAlert.source_key != original.source_key,
+            WeatherAlert.validation_status == "ACTIVE",
+        )
+    )
+    assert active is not None
+
+
+def test_inmet_client_rejects_malformed_xml_and_untrusted_url():
+    malformed = httpx.MockTransport(lambda _: httpx.Response(200, content=b"<rss>"))
+    with pytest.raises(InmetError):
+        InmetClient(Settings(inmet_enabled=True), transport=malformed).fetch_warnings()
+    with pytest.raises(InmetError):
+        InmetClient(
+            Settings(inmet_enabled=True, inmet_warning_rss_url="https://exemplo.com/rss")
+        ).fetch_warnings()
+    oversized = httpx.MockTransport(lambda _: httpx.Response(200, content=b"x" * 64))
+    with pytest.raises(InmetError):
+        InmetClient(
+            Settings(inmet_enabled=True, inmet_max_response_bytes=32),
+            transport=oversized,
+        ).fetch_warnings()
+    unavailable = httpx.MockTransport(lambda _: httpx.Response(429))
+    with pytest.raises(InmetError):
+        InmetClient(Settings(inmet_enabled=True), transport=unavailable).fetch_warnings()

@@ -6,26 +6,29 @@
   <title>PrevClima - Alertas</title>
   <link rel="stylesheet" href="/assets/css/styles.css">
   <script src="/assets/js/api.js" defer></script>
+  <script src="/assets/js/shell.js" defer></script>
   <script src="/assets/js/alerts.js" defer></script>
 </head>
 <body>
   <header class="topbar">
     <a class="brand" href="/inicio.html"><span class="brand-mark">&#9889;</span> Prev<span>Clima</span></a>
+    <nav class="desktop-nav" data-role-navigation aria-label="Navegação principal"></nav>
+    <span class="role-identity" data-role-identity></span>
   </header>
   <main class="app-shell">
     <header class="page-heading">
-      <div><h1>Alertas</h1><p class="muted">Ocorrencias meteorologicas ativas</p></div>
+      <div><span class="eyebrow">Tempo severo</span><h1>Alertas</h1><p class="muted">Ocorrências meteorológicas ativas</p></div>
       <span id="active-count" class="active-count">Carregando</span>
     </header>
-    <div id="confirmed-location" class="confirmed-location">&#9679; Verificando localizacao...</div>
+    <div id="confirmed-location" class="confirmed-location">&#9679; Verificando localização...</div>
     <section id="alert-list" class="alert-list" aria-live="polite">
       <p class="loading">Consultando alertas...</p>
     </section>
   </main>
-  <nav class="bottom-nav" aria-label="Navegacao principal">
-    <a href="/inicio.html">&#8962;<span>Inicio</span></a>
-    <a class="active" href="/alertas.html">!<span>Alertas</span></a>
-    <a class="nav-center" href="/inicio.html" aria-label="Previsao atual">&#9928;</a>
+  <nav class="bottom-nav" aria-label="Navegação principal">
+    <a href="/inicio.html">&#8962;<span>Início</span></a>
+    <a class="active" href="/alertas.html" aria-current="page">!<span>Alertas</span></a>
+    <a class="nav-center" href="/inicio.html" aria-label="Previsão atual">&#9928;</a>
     <a href="/mapa.html">&#9678;<span>Mapa</span></a>
     <a href="/perfil.html">&#9679;<span>Perfil</span></a>
   </nav>

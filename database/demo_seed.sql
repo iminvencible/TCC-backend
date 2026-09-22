@@ -2,13 +2,13 @@
 -- Demo user accounts are intentionally created by `python -m app.seed`, where passwords are hashed.
 
 INSERT INTO roles (code, display_name) VALUES
-    ('USER', 'Usuario'),
+    ('USER', 'Usuário'),
     ('METEOROLOGIST', 'Meteorologista'),
-    ('OWNER', 'Administrador')
+    ('ADMIN', 'Administrador')
 ON DUPLICATE KEY UPDATE display_name = CASE code
-    WHEN 'USER' THEN 'Usuario'
+    WHEN 'USER' THEN 'Usuário'
     WHEN 'METEOROLOGIST' THEN 'Meteorologista'
-    WHEN 'OWNER' THEN 'Administrador'
+    WHEN 'ADMIN' THEN 'Administrador'
 END;
 
 INSERT INTO forecasts (

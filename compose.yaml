@@ -7,8 +7,6 @@ services:
       MYSQL_USER: prevclima
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-change-me}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-change-root-me}
-    ports:
-      - "127.0.0.1:3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
@@ -24,19 +22,23 @@ services:
       db:
         condition: service_healthy
     environment:
-      APP_ENV: development
+      APP_ENV: ${APP_ENV:-development}
       DATABASE_URL: ${DATABASE_URL:-mysql+pymysql://prevclima:change-me@db:3306/prevclima?charset=utf8mb4}
       JWT_SECRET: ${JWT_SECRET:-development-secret-change-before-production}
-      COOKIE_SECURE: "false"
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
       SEED_DEMO_DATA: ${SEED_DEMO_DATA:-false}
-      SEED_OWNER_EMAIL: ${SEED_OWNER_EMAIL:-}
-      SEED_OWNER_PASSWORD: ${SEED_OWNER_PASSWORD:-}
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
       SEED_METEOROLOGIST_EMAIL: ${SEED_METEOROLOGIST_EMAIL:-}
       SEED_METEOROLOGIST_PASSWORD: ${SEED_METEOROLOGIST_PASSWORD:-}
       SEED_USER_EMAIL: ${SEED_USER_EMAIL:-}
       SEED_USER_PASSWORD: ${SEED_USER_PASSWORD:-}
+      INMET_WARNING_RSS_URL: ${INMET_WARNING_RSS_URL:-https://apiprevmet3.inmet.gov.br/avisos/rss}
+      INMET_ENABLED: ${INMET_ENABLED:-false}
+      INMET_TIMEOUT_SECONDS: ${INMET_TIMEOUT_SECONDS:-8}
+      INMET_MAX_RESPONSE_BYTES: ${INMET_MAX_RESPONSE_BYTES:-2000000}
     ports:
-      - "127.0.0.1:8000:8000"
+      - "127.0.0.1:${PREVCLIMA_PORT:-18080}:8000"
 
 volumes:
   mysql_data:

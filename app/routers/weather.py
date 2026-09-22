@@ -3,14 +3,17 @@ from math import asin, cos, radians, sin, sqrt
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import and_, desc, func, select
+from sqlalchemy import and_, desc, func, select, update
 from sqlalchemy.exc import IntegrityError
 
+from app.audit import record_audit
 from app.dependencies import CurrentUser, DbSession, optional_current_user, require_roles
-from app.models import AlertRead, Forecast, User, WeatherAlert
+from app.models import AlertRead, AlertReview, Forecast, User, WeatherAlert
 from app.schemas import (
     AlertCreateRequest,
     AlertOut,
+    AlertReviewOut,
+    AlertReviewRequest,
     ForecastOut,
     HomeOut,
     MapAlertOut,
@@ -19,7 +22,7 @@ from app.schemas import (
     MessageOut,
 )
 
-router = APIRouter(tags=["weather"])
+router = APIRouter(tags=["meteorologia"])
 
 
 def now_utc() -> datetime:
@@ -36,6 +39,12 @@ def alert_out(alert: WeatherAlert, read_ids: set[int] | None = None) -> AlertOut
         area_name=alert.area_name,
         recommendations=alert.recommendations,
         is_demo=alert.is_demo,
+        origin=alert.origin,
+        source_name=alert.source_name,
+        source_url=alert.source_url,
+        validation_status=alert.validation_status,
+        status_reason=alert.status_reason,
+        status_changed_at=alert.status_changed_at,
         issued_at=alert.issued_at,
         valid_until=alert.valid_until,
         is_read=bool(read_ids and alert.id in read_ids),
@@ -46,7 +55,13 @@ def active_alerts(db: DbSession) -> list[WeatherAlert]:
     return list(
         db.scalars(
             select(WeatherAlert)
-            .where(and_(WeatherAlert.issued_at <= now_utc(), WeatherAlert.valid_until > now_utc()))
+            .where(
+                and_(
+                    WeatherAlert.issued_at <= now_utc(),
+                    WeatherAlert.valid_until > now_utc(),
+                    WeatherAlert.validation_status == "ACTIVE",
+                )
+            )
             .order_by(desc(WeatherAlert.issued_at))
         )
     )
@@ -142,9 +157,10 @@ def list_alerts(
 ):
     if (latitude is None) != (longitude is None):
         raise HTTPException(
-            status_code=422, detail="latitude and longitude must be supplied together"
+            status_code=422, detail="Latitude e longitude devem ser informadas juntas"
         )
     query = select(WeatherAlert)
+    query = query.where(WeatherAlert.validation_status == "ACTIVE")
     if active:
         query = query.where(
             WeatherAlert.issued_at <= now_utc(), WeatherAlert.valid_until > now_utc()
@@ -157,14 +173,27 @@ def list_alerts(
     return [alert_out(alert, read_ids) for alert in alerts]
 
 
+@router.get("/alerts/review-queue", response_model=list[AlertOut])
+def alert_review_queue(
+    db: DbSession,
+    _: Annotated[User, Depends(require_roles("METEOROLOGIST"))],
+    limit: int = Query(default=100, ge=1, le=200),
+):
+    alerts = db.scalars(select(WeatherAlert).order_by(desc(WeatherAlert.issued_at)).limit(limit))
+    return [alert_out(alert) for alert in alerts]
+
+
 @router.post("/alerts", response_model=AlertOut, status_code=status.HTTP_201_CREATED)
 def create_alert(
     payload: AlertCreateRequest,
     db: DbSession,
-    user: Annotated[User, Depends(require_roles("METEOROLOGIST", "OWNER"))],
+    user: Annotated[User, Depends(require_roles("METEOROLOGIST"))],
 ):
     alert = WeatherAlert(
         created_by=user.id,
+        origin="MANUAL",
+        source_name="PrevClima - inserção manual",
+        validation_status="ACTIVE",
         title=payload.title,
         message=payload.message,
         event_type=payload.event_type,
@@ -184,10 +213,95 @@ def create_alert(
     return alert_out(alert)
 
 
+@router.post("/alerts/{alert_id}/review", response_model=AlertOut)
+def review_alert(
+    alert_id: int,
+    payload: AlertReviewRequest,
+    db: DbSession,
+    user: Annotated[User, Depends(require_roles("METEOROLOGIST"))],
+):
+    alert = db.get(WeatherAlert, alert_id)
+    if not alert:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Aviso não encontrado")
+    previous_status = alert.validation_status
+    if previous_status == payload.validation_status:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="O aviso já possui essa situação de validação",
+        )
+    changed_at = now_utc()
+    result = db.execute(
+        update(WeatherAlert)
+        .where(
+            WeatherAlert.id == alert_id,
+            WeatherAlert.validation_status == previous_status,
+        )
+        .values(
+            validation_status=payload.validation_status,
+            status_reason=payload.reason,
+            status_changed_by=user.id,
+            status_changed_at=changed_at,
+        )
+    )
+    if result.rowcount != 1:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="O aviso foi revisado por outra pessoa; atualize a página",
+        )
+    db.add(
+        AlertReview(
+            alert_id=alert_id,
+            reviewer_id=user.id,
+            previous_status=previous_status,
+            new_status=payload.validation_status,
+            reason=payload.reason,
+            created_at=changed_at,
+        )
+    )
+    record_audit(
+        db,
+        actor=user,
+        action="ALERT_REVIEWED",
+        target_type="weather_alert",
+        target_id=alert_id,
+        details={
+            "previous_status": previous_status,
+            "new_status": payload.validation_status,
+            "reason": payload.reason,
+        },
+    )
+    db.commit()
+    return alert_out(db.get(WeatherAlert, alert_id))
+
+
+@router.get("/alerts/{alert_id}/reviews", response_model=list[AlertReviewOut])
+def alert_review_history(
+    alert_id: int,
+    db: DbSession,
+    _: Annotated[User, Depends(require_roles("METEOROLOGIST"))],
+):
+    if not db.get(WeatherAlert, alert_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Aviso não encontrado")
+    return list(
+        db.scalars(
+            select(AlertReview)
+            .where(AlertReview.alert_id == alert_id)
+            .order_by(AlertReview.created_at, AlertReview.id)
+        )
+    )
+
+
 @router.post("/alerts/{alert_id}/read", response_model=MessageOut)
 def mark_alert_read(alert_id: int, user: CurrentUser, db: DbSession):
-    if not db.get(WeatherAlert, alert_id):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Alert not found")
+    alert = db.scalar(
+        select(WeatherAlert).where(
+            WeatherAlert.id == alert_id,
+            WeatherAlert.validation_status == "ACTIVE",
+        )
+    )
+    if not alert:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Aviso não encontrado")
     exists = db.scalar(
         select(AlertRead.id).where(AlertRead.user_id == user.id, AlertRead.alert_id == alert_id)
     )
@@ -197,7 +311,7 @@ def mark_alert_read(alert_id: int, user: CurrentUser, db: DbSession):
             db.commit()
         except IntegrityError:
             db.rollback()
-    return MessageOut(message="Alert marked as read")
+    return MessageOut(message="Aviso marcado como lido")
 
 
 @router.get("/forecasts/current", response_model=ForecastOut)
@@ -217,7 +331,9 @@ def current_forecast(
         .order_by(desc(Forecast.issued_at))
     )
     if not forecast:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No current forecast")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Previsão atual indisponível"
+        )
     return forecast
 
 
@@ -232,7 +348,7 @@ def home(
 ):
     if (latitude is None) != (longitude is None):
         raise HTTPException(
-            status_code=422, detail="latitude and longitude must be supplied together"
+            status_code=422, detail="Latitude e longitude devem ser informadas juntas"
         )
     if user and user.city and user.state:
         city, state = user.city, user.state
@@ -296,6 +412,10 @@ def map_data(db: DbSession):
             radius_km=alert.radius_km,
             polygon=alert.polygon,
             is_demo=alert.is_demo,
+            origin=alert.origin,
+            source_name=alert.source_name,
+            source_url=alert.source_url,
+            validation_status=alert.validation_status,
             issued_at=alert.issued_at,
             valid_until=alert.valid_until,
         )

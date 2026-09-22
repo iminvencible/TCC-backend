@@ -8,11 +8,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   try {
     const user = await PrevClima.request("/users/me");
-    if (!professional || ["METEOROLOGIST", "OWNER"].includes(user.role)) {
+    if (!professional || ["METEOROLOGIST", "ADMIN"].includes(user.role)) {
       window.location.replace(destination);
       return;
     }
-    message.textContent = "Esta conta nao possui acesso profissional.";
+    message.textContent = "Esta conta não possui acesso profissional.";
   } catch (error) {
     if (error.status !== 401) message.textContent = error.message;
   }
@@ -23,14 +23,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     message.textContent = "";
     PrevClima.setBusy(button, true);
     try {
-      await PrevClima.request(professional ? "/auth/login-professional" : "/auth/login", {
+      const result = await PrevClima.request(professional ? "/auth/login-professional" : "/auth/login", {
         method: "POST",
         body: JSON.stringify({
           email: form.email.value.trim(),
           password: form.password.value,
         }),
       });
-      window.location.assign(destination);
+      if (professional) {
+        window.location.assign(result.user.role === "ADMIN" ? "/admin.html" : "/profissional.html");
+      } else {
+        window.location.assign(destination);
+      }
     } catch (error) {
       message.textContent = error.message;
     } finally {

@@ -8,23 +8,24 @@
   <link rel="stylesheet" href="/assets/css/styles.css">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous" defer></script>
   <script src="/assets/js/api.js" defer></script>
+  <script src="/assets/js/shell.js" defer></script>
   <script src="/assets/js/map.js" defer></script>
 </head>
 <body class="map-page">
   <header class="map-header"><a href="/inicio.html" aria-label="Voltar">&#8592;</a><strong>Brasil</strong><span id="map-status">Carregando</span></header>
-  <main id="weather-map" aria-label="Mapa de previsoes e alertas meteorologicos"></main>
+  <main id="weather-map" aria-label="Mapa de previsões e alertas meteorológicos"></main>
   <button id="toggle-layers" class="map-floating-button" type="button" aria-expanded="true" aria-controls="layer-panel">&#9881;</button>
   <aside id="layer-panel" class="layer-panel">
     <div class="layer-panel-title"><strong>Mostrar</strong><button id="close-layers" type="button" aria-label="Fechar">&times;</button></div>
-    <label><input id="forecast-layer" type="checkbox" checked> Previsao de tempo severo</label>
+    <label><input id="forecast-layer" type="checkbox" checked> Previsão de tempo severo</label>
     <label><input id="alert-layer" type="checkbox" checked> Alertas de tempo severo</label>
   </aside>
-  <div class="map-legend" aria-label="Niveis de gravidade"><span style="--level:#2fe342">1</span><span style="--level:#ffd42a">2</span><span style="--level:#ff8426">3</span><span style="--level:#ef3045">4</span></div>
-  <nav class="bottom-nav" aria-label="Navegacao principal">
-    <a href="/inicio.html">&#8962;<span>Inicio</span></a>
+  <div class="map-legend" aria-label="Níveis de gravidade" title="Baixo, moderado, alto e crítico"><span style="--level:#2fe342">1</span><span style="--level:#ffd42a">2</span><span style="--level:#ff8426">3</span><span style="--level:#ef3045">4</span></div>
+  <nav class="bottom-nav" aria-label="Navegação principal">
+    <a href="/inicio.html">&#8962;<span>Início</span></a>
     <a href="/alertas.html">!<span>Alertas</span></a>
-    <a class="nav-center" href="/inicio.html" aria-label="Previsao atual">&#9928;</a>
-    <a class="active" href="/mapa.html">&#9678;<span>Mapa</span></a>
+    <a class="nav-center" href="/inicio.html" aria-label="Previsão atual">&#9928;</a>
+    <a class="active" href="/mapa.html" aria-current="page">&#9678;<span>Mapa</span></a>
     <a href="/perfil.html">&#9679;<span>Perfil</span></a>
   </nav>
 </body>

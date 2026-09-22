@@ -177,4 +177,58 @@ CREATE TABLE alert_reads (
     CONSTRAINT uq_alert_read_user_alert UNIQUE (user_id, alert_id)
 );
 
-INSERT INTO alembic_version (version_num) VALUES ('b6f535f44c51');
+-- Running upgrade b6f535f44c51 -> 9d62a8f410be
+
+UPDATE roles SET code = 'ADMIN', display_name = 'Administrador' WHERE code = 'OWNER';
+UPDATE roles SET display_name = 'Usuário' WHERE code = 'USER';
+
+ALTER TABLE weather_alerts
+    ADD COLUMN origin VARCHAR(16) NOT NULL DEFAULT 'MANUAL',
+    ADD COLUMN source_name VARCHAR(120) NOT NULL DEFAULT 'PrevClima',
+    ADD COLUMN source_url VARCHAR(500),
+    ADD COLUMN validation_status VARCHAR(24) NOT NULL DEFAULT 'ACTIVE',
+    ADD COLUMN status_reason TEXT,
+    ADD COLUMN status_changed_by INTEGER,
+    ADD COLUMN status_changed_at DATETIME,
+    ADD CONSTRAINT ck_alert_origin CHECK (origin IN ('DEMO', 'MANUAL', 'INMET')),
+    ADD CONSTRAINT ck_alert_validation_status CHECK (validation_status IN ('ACTIVE', 'FALSE_ALARM', 'NEEDS_CORRECTION')),
+    ADD CONSTRAINT fk_weather_alerts_status_changed_by_users FOREIGN KEY(status_changed_by) REFERENCES users (id) ON DELETE SET NULL;
+
+CREATE INDEX ix_alerts_validation ON weather_alerts (validation_status, valid_until);
+
+UPDATE weather_alerts
+SET origin = 'DEMO', source_name = 'PrevClima - demonstracao'
+WHERE is_demo = TRUE;
+
+CREATE TABLE alert_reviews (
+    id INTEGER NOT NULL AUTO_INCREMENT,
+    alert_id INTEGER NOT NULL,
+    reviewer_id INTEGER NOT NULL,
+    previous_status VARCHAR(24) NOT NULL,
+    new_status VARCHAR(24) NOT NULL,
+    reason TEXT NOT NULL,
+    created_at DATETIME NOT NULL,
+    PRIMARY KEY (id),
+    CONSTRAINT ck_alert_review_previous_status CHECK (previous_status IN ('ACTIVE', 'FALSE_ALARM', 'NEEDS_CORRECTION')),
+    CONSTRAINT ck_alert_review_new_status CHECK (new_status IN ('ACTIVE', 'FALSE_ALARM', 'NEEDS_CORRECTION')),
+    FOREIGN KEY(alert_id) REFERENCES weather_alerts (id) ON DELETE RESTRICT,
+    FOREIGN KEY(reviewer_id) REFERENCES users (id) ON DELETE RESTRICT
+);
+
+CREATE INDEX ix_alert_reviews_alert_created ON alert_reviews (alert_id, created_at);
+
+CREATE TABLE audit_events (
+    id INTEGER NOT NULL AUTO_INCREMENT,
+    actor_id INTEGER,
+    action VARCHAR(80) NOT NULL,
+    target_type VARCHAR(50) NOT NULL,
+    target_id VARCHAR(64) NOT NULL,
+    details JSON NOT NULL,
+    created_at DATETIME NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY(actor_id) REFERENCES users (id) ON DELETE SET NULL
+);
+
+CREATE INDEX ix_audit_target_created ON audit_events (target_type, target_id, created_at);
+
+INSERT INTO alembic_version (version_num) VALUES ('9d62a8f410be');

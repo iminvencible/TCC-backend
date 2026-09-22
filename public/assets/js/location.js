@@ -12,7 +12,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   button.addEventListener("click", () => {
     message.textContent = "";
     if (!navigator.geolocation) {
-      message.textContent = "Este navegador nao oferece geolocalizacao.";
+      message.textContent = "Este navegador não oferece geolocalização.";
       return;
     }
     PrevClima.setBusy(button, true);
@@ -30,7 +30,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       },
       () => {
-        message.textContent = "Nao foi possivel obter a localizacao. Voce pode continuar e tentar novamente no perfil.";
+        message.textContent = "Não foi possível obter a localização. Você pode continuar e tentar novamente no perfil.";
         PrevClima.setBusy(button, false);
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 },

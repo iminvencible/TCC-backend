@@ -24,9 +24,9 @@ def db():
     with factory() as session:
         session.add_all(
             [
-                Role(code="USER", display_name="Usuario"),
+                Role(code="USER", display_name="Usuário"),
                 Role(code="METEOROLOGIST", display_name="Meteorologista"),
-                Role(code="OWNER", display_name="Administrador"),
+                Role(code="ADMIN", display_name="Administrador"),
             ]
         )
         now = datetime.now(UTC)
@@ -83,14 +83,14 @@ def db():
                     source_key="TEST-EDU-PUBLISHED",
                     title="Seguranca em tempestades",
                     body="Procure abrigo seguro e acompanhe os alertas oficiais.",
-                    reference_url="https://example.com/safety",
+                    reference_url="https://exemplo.com/seguranca",
                     published_at=now - timedelta(hours=1),
                 ),
                 EducationalContent(
                     source_key="TEST-EDU-FUTURE",
                     title="Conteudo agendado",
                     body="Este conteudo ainda nao deve aparecer na pagina publica.",
-                    reference_url="https://example.com/future",
+                    reference_url="https://exemplo.com/futuro",
                     published_at=now + timedelta(days=1),
                 ),
             ]
@@ -118,7 +118,7 @@ def registered_client(client: TestClient):
         "/api/v1/auth/register",
         json={
             "name": "Maria Teste",
-            "email": "maria@example.com",
+            "email": "maria@exemplo.com",
             "password": "Senha123!",
             "city": "Mongagua",
             "state": "SP",

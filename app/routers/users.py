@@ -4,7 +4,7 @@ from app.dependencies import CurrentUser, DbSession
 from app.schemas import ProfileUpdate, UserOut
 from app.services import user_out
 
-router = APIRouter(prefix="/users", tags=["users"])
+router = APIRouter(prefix="/users", tags=["usuários"])
 
 
 @router.get("/me", response_model=UserOut)
