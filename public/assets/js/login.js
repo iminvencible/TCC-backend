@@ -3,7 +3,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   const message = document.querySelector("#form-message");
   const professional = document.body.dataset.professional === "true";
   const next = new URLSearchParams(window.location.search).get("next");
-  const destination = next && next.startsWith("/") && !next.startsWith("//") ? next : "/inicio.html";
+  let destination = "/inicio.html";
+  if (next && next.startsWith("/") && !next.startsWith("//") && !next.includes("\\")) {
+    try {
+      const target = new URL(next, window.location.origin);
+      if (target.origin === window.location.origin) {
+        destination = `${target.pathname}${target.search}${target.hash}`;
+      }
+    } catch (_error) { /* Destino malformado: usar a página inicial. */ }
+  }
   if (!form) return;
 
   try {

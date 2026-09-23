@@ -81,7 +81,17 @@ class Forecast(Base):
         CheckConstraint("valid_until > issued_at", name="ck_forecast_validity"),
         CheckConstraint("humidity BETWEEN 0 AND 100", name="ck_forecast_humidity"),
         CheckConstraint("rain_probability BETWEEN 0 AND 100", name="ck_forecast_rain"),
+        CheckConstraint("latitude IS NULL OR latitude BETWEEN -90 AND 90", name="ck_forecast_lat"),
+        CheckConstraint(
+            "longitude IS NULL OR longitude BETWEEN -180 AND 180", name="ck_forecast_lon"
+        ),
+        CheckConstraint(
+            "(latitude IS NULL AND longitude IS NULL) OR "
+            "(latitude IS NOT NULL AND longitude IS NOT NULL)",
+            name="ck_forecast_coordinates_pair",
+        ),
         Index("ix_forecasts_location_valid", "city", "state", "valid_until"),
+        Index("ix_forecasts_coords_valid", "latitude", "longitude", "valid_until"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -89,6 +99,8 @@ class Forecast(Base):
     created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     city: Mapped[str] = mapped_column(String(100), nullable=False)
     state: Mapped[str] = mapped_column(String(2), nullable=False)
+    latitude: Mapped[Decimal | None] = mapped_column(Numeric(9, 6))
+    longitude: Mapped[Decimal | None] = mapped_column(Numeric(9, 6))
     condition: Mapped[str] = mapped_column(String(120), nullable=False)
     temperature_c: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)
     minimum_c: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)
@@ -123,7 +135,7 @@ class WeatherAlert(Base):
         ),
         CheckConstraint("radius_km IS NULL OR radius_km > 0", name="ck_alert_radius"),
         CheckConstraint(
-            "polygon IS NOT NULL OR "
+            "origin = 'INMET' OR polygon IS NOT NULL OR "
             "(latitude IS NOT NULL AND longitude IS NOT NULL AND radius_km IS NOT NULL)",
             name="ck_alert_has_area",
         ),

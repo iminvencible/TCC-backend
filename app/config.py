@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     inmet_warning_rss_url: str = "https://apiprevmet3.inmet.gov.br/avisos/rss"
     inmet_timeout_seconds: float = 8.0
     inmet_max_response_bytes: int = 2_000_000
+    inmet_sync_interval_minutes: int = Field(default=60, ge=10, le=1440)
     inmet_user_agent: str = "PrevClima/0.1 (integracao academica)"
     open_meteo_enabled: bool = False
     open_meteo_api_url: str = "https://api.open-meteo.com/v1/forecast"

@@ -1,4 +1,4 @@
-const CACHE = "prevclima-mobile-v2";
+const CACHE = "prevclima-mobile-v3";
 const SHELL = [
   "/mobile/",
   "/mobile/inicio.html",

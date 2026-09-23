@@ -16,7 +16,10 @@ leve de desenvolvimento.
   relatos conectados ao banco.
 - Previsão atual e diária obtida do Open-Meteo, com geocodificação de cidades,
   cache de 15 minutos e fallback para o último dado salvo.
-- Meteorologista: emissão direta de avisos, revisão de relatos, sincronização de
+- Mapa com previsões pontuais do Open-Meteo separadas dos polígonos de avisos;
+  busca por cidade pública e GPS apenas para contas autenticadas. Se a biblioteca
+  do mapa ou os mosaicos não carregarem, os dados disponíveis aparecem em texto.
+- Meteorologista: emissão direta de avisos, revisão de relatos, sincronização manual de
   avisos oficiais do INMET e marcação de aviso como alarme falso ou pendente de
   correção, com histórico de auditoria.
 - Administrador: criação apenas de contas de meteorologista, alteração de função e
@@ -95,15 +98,17 @@ Variáveis do Open-Meteo:
 | `OPEN_METEO_CACHE_MINUTES` | Validade do cache recente |
 | `OPEN_METEO_STALE_HOURS` | Janela máxima do fallback salvo |
 
-O INMET continua sendo a fonte oficial dos avisos meteorológicos brasileiros. O
-projeto consulta sob demanda o RSS oficial de avisos:
+O INMET continua sendo a fonte oficial dos avisos meteorológicos brasileiros. Um
+processo separado (`inmet-worker`) consulta o RSS oficial assim que a API estiver
+pronta e repete a consulta a cada 60 minutos, por padrão:
 
 `https://apiprevmet3.inmet.gov.br/avisos/rss`
 
 A integração valida domínio e HTTPS, limita transferência e tempo de resposta, faz
 importação idempotente e mantém disponíveis os avisos já armazenados quando o INMET
-está indisponível. Avisos sem um polígono parseável e com coordenadas dentro dos
-limites não recebem área inventada e são ignorados na importação espacial.
+está indisponível. Os avisos expiram pelo prazo indicado pela fonte; dados salvos não
+significam que um aviso expirado seja exibido como ativo. Avisos sem polígono
+parseável são preservados como informação textual e não recebem área inventada.
 
 Não foi encontrada documentação formal ou contrato para uma API JSON de previsão
 nas páginas oficiais do INMET consultadas. Por isso, o projeto usa apenas o feed
@@ -114,16 +119,28 @@ Variáveis disponíveis:
 
 | Variável | Finalidade |
 | --- | --- |
-| `INMET_ENABLED` | Habilita a sincronização manual |
+| `INMET_ENABLED` | Habilita sincronização automática e manual (`true` por padrão no Compose) |
 | `INMET_WARNING_RSS_URL` | Endereço oficial do RSS |
 | `INMET_TIMEOUT_SECONDS` | Limite de espera da consulta |
 | `INMET_MAX_RESPONSE_BYTES` | Tamanho máximo aceito |
+| `INMET_SYNC_INTERVAL_MINUTES` | Intervalo em minutos entre tentativas (10–1440; padrão 60) |
 
-Também é possível sincronizar pela linha de comando:
+O painel do meteorologista continua oferecendo sincronização sob demanda. A linha de
+comando também executa uma única tentativa:
 
 ```bash
 python -m app.sync_inmet
 ```
+
+Para verificar o processo automático no Docker: `docker compose logs -f inmet-worker`.
+O RSS pode conter avisos sem polígono CAP. Nesses casos, a página do mapa mostra
+o aviso em texto, sem gerar uma área fictícia. Se não houver áreas compatíveis e
+vigentes, o mapa não terá polígonos do INMET para mostrar.
+O endereço do RSS consta no portal do INMET, mas a compatibilidade com o formato
+atual dos itens e a presença de polígonos não foram verificadas em uma consulta
+real neste ambiente. Antes de uma apresentação com dados ao vivo, acompanhe
+`docker compose logs inmet-worker` e compare os avisos importados com o portal
+oficial. Não trate ausência de avisos no mapa como ausência de risco.
 
 ## Banco de dados
 
@@ -131,6 +148,8 @@ python -m app.sync_inmet
 - A revisão `9d62a8f410be` migra `OWNER` para `ADMIN`, adiciona origem e situação dos
   avisos, histórico de revisão e eventos de auditoria.
 - A revisão `4a8c1e7d2b90` adiciona o link de atribuição da fonte às previsões.
+- A revisão `5f0e7c29b4a1` guarda coordenadas das previsões e permite avisos
+  oficiais do INMET sem geometria, preservando-os como informação textual.
 - `banco tcc.sql` e `database/schema.mysql.sql` documentam a estrutura MySQL.
 - `database/demo_seed.sql` contém dados meteorológicos demonstrativos sem senhas.
 - `python -m app.seed` cria funções, contas locais com hash e dados de demonstração
@@ -142,9 +161,17 @@ Para desenvolvimento sem Docker:
 python -m venv .venv
 source .venv/bin/activate
 pip install -e '.[dev]'
+export OPEN_METEO_ENABLED=true INMET_ENABLED=true
 alembic upgrade head
 uvicorn app.main:app --reload
 ```
+
+Em outro terminal, no mesmo diretório e com o ambiente ativado, execute
+`python -m app.sync_inmet --loop` para sincronizar o INMET também na instalação
+sem Docker. No PowerShell, use `py -m venv .venv` e
+`.\.venv\Scripts\Activate.ps1` no lugar das duas primeiras linhas; instale as
+dependências e defina `$env:OPEN_METEO_ENABLED = "true"` e
+`$env:INMET_ENABLED = "true"` antes de iniciar os processos.
 
 ## Verificação
 

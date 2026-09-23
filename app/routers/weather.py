@@ -20,6 +20,7 @@ from app.schemas import (
     MapAlertOut,
     MapDataOut,
     MapForecastOut,
+    MapForecastPointOut,
     MessageOut,
 )
 
@@ -402,7 +403,62 @@ def home(
 
 
 @router.get("/map-data", response_model=MapDataOut)
-def map_data(db: DbSession):
+def map_data(
+    db: DbSession,
+    user: Annotated[User | None, Depends(optional_current_user)],
+    city: str | None = Query(default=None, min_length=2, max_length=100),
+    state: str | None = Query(default=None, min_length=2, max_length=2),
+    latitude: float | None = Query(default=None, ge=-90, le=90),
+    longitude: float | None = Query(default=None, ge=-180, le=180),
+):
+    if (latitude is None) != (longitude is None):
+        raise HTTPException(
+            status_code=422, detail="Latitude e longitude devem ser informadas juntas"
+        )
+    if (city is None) != (state is None):
+        raise HTTPException(status_code=422, detail="Cidade e UF devem ser informadas juntas")
+    if latitude is not None and user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Entre na sua conta para consultar sua localização no mapa",
+        )
+    explicit_location = city is not None or latitude is not None
+    if city is None:
+        if latitude is not None:
+            city, state = "Minha localização", "BR"
+        else:
+            city = user.city if user and user.city else "Mongagua"
+            state = user.state if user and user.state else "SP"
+    if latitude is None and not explicit_location and user:
+        if user.latitude is not None and user.longitude is not None:
+            latitude, longitude = float(user.latitude), float(user.longitude)
+    forecast, is_stale = get_open_meteo_or_fallback(
+        db,
+        city=city,
+        state=state,
+        latitude=latitude,
+        longitude=longitude,
+        require_coordinates=True,
+    )
+    forecast_points = []
+    if forecast and forecast.latitude is not None and forecast.longitude is not None:
+        forecast_points.append(
+            MapForecastPointOut(
+                id=forecast.id,
+                city=forecast.city,
+                state=forecast.state,
+                latitude=forecast.latitude,
+                longitude=forecast.longitude,
+                condition=forecast.condition,
+                temperature_c=forecast.temperature_c,
+                rain_probability=forecast.rain_probability,
+                source_name=forecast.source_name,
+                source_url=forecast.source_url,
+                issued_at=forecast.issued_at,
+                valid_until=forecast.valid_until,
+                is_stale=is_stale,
+            )
+        )
     alerts = [
         MapAlertOut(
             id=alert.id,
@@ -446,4 +502,9 @@ def map_data(db: DbSession):
         for forecast in forecasts
         if forecast.polygon
     ]
-    return MapDataOut(alerts=alerts, forecast_areas=forecast_areas, generated_at=now_utc())
+    return MapDataOut(
+        alerts=alerts,
+        forecast_areas=forecast_areas,
+        forecast_points=forecast_points,
+        generated_at=now_utc(),
+    )

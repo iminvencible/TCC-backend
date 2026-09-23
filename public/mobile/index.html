@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#063b91">
+  <meta name="theme-color" content="#081a36">
   <title>PrevClima Móvel</title>
   <link rel="manifest" href="/mobile/manifest.webmanifest">
   <link rel="icon" href="/mobile/icon.svg" type="image/svg+xml">
@@ -12,34 +12,39 @@
   <script src="/mobile/mobile.js" defer></script>
 </head>
 <body class="mobile-auth">
-  <main class="mobile-frame">
+  <main class="mobile-frame mobile-auth-frame">
     <header class="mobile-brand">
-      <span aria-hidden="true">⛈️</span>
+      <div class="mobile-brand-mark"><img src="/mobile/icon.svg" alt="" width="72" height="72"></div>
       <h1>Prev<span>Clima</span></h1>
-      <p>Segurança climática no seu celular</p>
+      <p>O tempo muda. Você se antecipa.</p>
     </header>
-    <section class="mobile-card">
-      <div class="mobile-tabs" role="tablist">
-        <button id="show-login" class="active" type="button">Entrar</button>
-        <button id="show-register" type="button">Criar conta</button>
+    <section class="mobile-card" aria-label="Acessar o PrevClima">
+      <div class="mobile-card-heading">
+        <span class="mobile-eyebrow">SUA ÁREA</span>
+        <h2>O clima da sua região, em primeiro lugar.</h2>
+        <p>Entre para acompanhar a previsão e os avisos para você.</p>
       </div>
-      <form id="mobile-login-form">
-        <label>E-mail<input name="email" type="email" autocomplete="email" required></label>
+      <div class="mobile-tabs" role="tablist" aria-label="Acesso à conta">
+        <button id="show-login" class="active" type="button" role="tab" aria-controls="mobile-login-form" aria-selected="true" tabindex="0">Entrar</button>
+        <button id="show-register" type="button" role="tab" aria-controls="mobile-register-form" aria-selected="false" tabindex="-1">Criar conta</button>
+      </div>
+      <form id="mobile-login-form" role="tabpanel" aria-labelledby="show-login">
+        <label>E-mail<input name="email" type="email" inputmode="email" autocomplete="email" placeholder="voce@exemplo.com" required></label>
         <label>Senha<input name="password" type="password" autocomplete="current-password" required></label>
-        <p class="mobile-message" role="alert"></p>
-        <button class="mobile-primary" type="submit">Entrar no aplicativo</button>
+        <p class="mobile-message" role="alert" aria-live="assertive"></p>
+        <button class="mobile-primary" type="submit">Entrar no aplicativo <span aria-hidden="true">→</span></button>
       </form>
-      <form id="mobile-register-form" hidden>
-        <label>Nome completo<input name="name" minlength="2" maxlength="120" autocomplete="name" required></label>
-        <label>E-mail<input name="email" type="email" autocomplete="email" required></label>
+      <form id="mobile-register-form" role="tabpanel" aria-labelledby="show-register" hidden>
+        <label>Nome completo<input name="name" minlength="2" maxlength="120" autocomplete="name" placeholder="Seu nome" required></label>
+        <label>E-mail<input name="email" type="email" inputmode="email" autocomplete="email" placeholder="voce@exemplo.com" required></label>
         <label>Senha<input name="password" type="password" minlength="8" maxlength="128" autocomplete="new-password" required></label>
-        <p class="mobile-helper">Use maiúscula, minúscula, número e símbolo.</p>
-        <p class="mobile-message" role="alert"></p>
-        <button class="mobile-primary" type="submit">Criar conta de usuário</button>
+        <p class="mobile-helper">Use letras maiúsculas e minúsculas, número e símbolo.</p>
+        <p class="mobile-message" role="alert" aria-live="assertive"></p>
+        <button class="mobile-primary" type="submit">Criar minha conta <span aria-hidden="true">→</span></button>
       </form>
     </section>
-    <p class="mobile-note">Somente contas de usuário entram neste aplicativo. Meteorologistas e administradores usam o site.</p>
-    <a class="mobile-site-link" href="/">Abrir versão do site</a>
+    <div class="mobile-access-note"><span aria-hidden="true">✦</span><p>Este aplicativo é para usuários. Meteorologistas e administradores acessam pelo site.</p></div>
+    <a class="mobile-site-link" href="/">Ir para a versão do site <span aria-hidden="true">↗</span></a>
   </main>
 </body>
 </html>
