@@ -10,9 +10,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     registerForm.hidden = !register;
     loginTab.classList.toggle("active", !register);
     registerTab.classList.toggle("active", register);
+    loginTab.setAttribute("aria-selected", String(!register));
+    registerTab.setAttribute("aria-selected", String(register));
+    loginTab.tabIndex = register ? -1 : 0;
+    registerTab.tabIndex = register ? 0 : -1;
+    loginForm.querySelector(".mobile-message").textContent = "";
+    registerForm.querySelector(".mobile-message").textContent = "";
   }
   loginTab.addEventListener("click", () => show(false));
   registerTab.addEventListener("click", () => show(true));
+  [loginTab, registerTab].forEach((tab) => tab.addEventListener("keydown", (event) => {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const register = event.key === "End" || (event.key !== "Home" && tab === loginTab);
+    show(register);
+    (register ? registerTab : loginTab).focus();
+  }));
 
   try {
     const result = await PrevClima.request("/auth/mobile-session");

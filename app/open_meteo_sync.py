@@ -24,7 +24,9 @@ def forecast_cache_key(
     longitude: float | None = None,
 ) -> str:
     if latitude is not None and longitude is not None:
-        location = f"{latitude:.4f}|{longitude:.4f}"
+        # Coarse cells avoid keeping exact device coordinates and make nearby
+        # requests share a cached forecast instead of creating one row per GPS fix.
+        location = f"{latitude:.2f}|{longitude:.2f}"
     else:
         location = f"{city.strip().casefold()}|{state.strip().upper()}"
     digest = hashlib.sha256(location.encode("utf-8")).hexdigest()[:32].upper()
@@ -42,7 +44,9 @@ def refresh_open_meteo_forecast(
 ) -> Forecast:
     client = client or OpenMeteoClient()
     coordinates_supplied = latitude is not None and longitude is not None
-    if latitude is None or longitude is None:
+    if coordinates_supplied:
+        latitude, longitude = round(latitude, 2), round(longitude, 2)
+    else:
         coordinates = client.geocode(city, state)
         latitude, longitude = coordinates.latitude, coordinates.longitude
     normalized = client.fetch_forecast(latitude, longitude)
@@ -62,6 +66,8 @@ def refresh_open_meteo_forecast(
         db.add(forecast)
     forecast.city = " ".join(city.split())
     forecast.state = state.strip().upper()
+    forecast.latitude = Decimal(str(round(latitude, 6)))
+    forecast.longitude = Decimal(str(round(longitude, 6)))
     forecast.condition = normalized.condition
     forecast.temperature_c = Decimal(str(round(normalized.temperature_c, 2)))
     forecast.minimum_c = Decimal(str(round(normalized.minimum_c, 2)))
@@ -97,6 +103,7 @@ def get_open_meteo_or_fallback(
     longitude: float | None = None,
     settings: Settings | None = None,
     client: OpenMeteoClient | None = None,
+    require_coordinates: bool = False,
 ) -> tuple[Forecast | None, bool]:
     settings = settings or get_settings()
     now = datetime.now(UTC)
@@ -108,7 +115,9 @@ def get_open_meteo_or_fallback(
             Forecast.valid_until > now,
         )
     )
-    if fresh:
+    if fresh and (
+        not require_coordinates or (fresh.latitude is not None and fresh.longitude is not None)
+    ):
         return fresh, False
 
     if settings.open_meteo_enabled:
@@ -126,6 +135,11 @@ def get_open_meteo_or_fallback(
             )
         except OpenMeteoError:
             pass
+
+    # Existing records predating the coordinate migration remain valid forecasts,
+    # even if a point cannot yet be drawn until a successful provider refresh.
+    if fresh:
+        return fresh, False
 
     stale_cutoff = now - timedelta(hours=settings.open_meteo_stale_hours)
     stale = db.scalar(

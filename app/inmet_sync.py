@@ -62,9 +62,6 @@ def sync_inmet_warnings(
         if db.scalar(select(WeatherAlert.id).where(WeatherAlert.source_key == warning.source_key)):
             skipped += 1
             continue
-        if not warning.polygon:
-            skipped += 1
-            continue
         if warning.message_type == "UPDATE":
             supersede_references()
         db.add(

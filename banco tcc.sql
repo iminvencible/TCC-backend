@@ -235,4 +235,19 @@ CREATE INDEX ix_audit_target_created ON audit_events (target_type, target_id, cr
 
 ALTER TABLE forecasts ADD COLUMN source_url VARCHAR(500);
 
-INSERT INTO alembic_version (version_num) VALUES ('4a8c1e7d2b90');
+-- Running upgrade 4a8c1e7d2b90 -> 5f0e7c29b4a1
+
+ALTER TABLE forecasts
+    ADD COLUMN latitude NUMERIC(9, 6),
+    ADD COLUMN longitude NUMERIC(9, 6),
+    ADD CONSTRAINT ck_forecast_lat CHECK (latitude IS NULL OR latitude BETWEEN -90 AND 90),
+    ADD CONSTRAINT ck_forecast_lon CHECK (longitude IS NULL OR longitude BETWEEN -180 AND 180),
+    ADD CONSTRAINT ck_forecast_coordinates_pair CHECK ((latitude IS NULL AND longitude IS NULL) OR (latitude IS NOT NULL AND longitude IS NOT NULL));
+
+CREATE INDEX ix_forecasts_coords_valid ON forecasts (latitude, longitude, valid_until);
+
+ALTER TABLE weather_alerts
+    DROP CHECK ck_alert_has_area,
+    ADD CONSTRAINT ck_alert_has_area CHECK (origin = 'INMET' OR polygon IS NOT NULL OR (latitude IS NOT NULL AND longitude IS NOT NULL AND radius_km IS NOT NULL));
+
+INSERT INTO alembic_version (version_num) VALUES ('5f0e7c29b4a1');

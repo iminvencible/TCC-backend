@@ -20,12 +20,13 @@
   </header>
   <main class="app-shell">
     <div class="location-row">
-      <button id="open-location" class="location-button" type="button">&#8982; <span id="location-name">Mongagua, SP</span></button>
+      <div class="location-context"><span class="eyebrow">SUA REGIÃO AGORA</span><button id="open-location" class="location-button" type="button"><span aria-hidden="true">&#8982;</span> <span id="location-name">Mongaguá, SP</span> <span class="location-chevron" aria-hidden="true">&#8964;</span></button></div>
       <span id="auth-state" class="muted" data-role-identity>Visitante</span>
     </div>
     <div class="home-layout">
     <div class="weather-column">
     <section class="weather-hero" aria-live="polite">
+      <div class="hero-kicker"><span class="eyebrow">PANORAMA DO TEMPO</span><span class="hero-live-dot" aria-hidden="true"></span></div>
       <div class="weather-icon" aria-hidden="true">&#9729;&#65039;</div>
       <div class="temperature"><span id="temperature">--</span><small>&deg;C</small></div>
       <h1 id="condition" class="condition">Carregando previsão...</h1>
@@ -39,6 +40,7 @@
     </section>
     </div>
     <section id="warning-panel" class="warning-panel">
+      <span class="eyebrow">MONITORAMENTO DA REGIÃO</span>
       <div class="risk-icon" aria-hidden="true">!</div>
       <span id="demo-chip" class="demo-chip" hidden>Dados de demonstração</span>
       <h2 id="warning-title">Nenhum alerta carregado</h2>

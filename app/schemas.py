@@ -344,9 +344,30 @@ class MapForecastOut(BaseModel):
         return utc_iso(value)
 
 
+class MapForecastPointOut(BaseModel):
+    id: int
+    city: str
+    state: str
+    latitude: Decimal
+    longitude: Decimal
+    condition: str
+    temperature_c: Decimal
+    rain_probability: int
+    source_name: str
+    source_url: str | None
+    issued_at: datetime
+    valid_until: datetime
+    is_stale: bool = False
+
+    @field_serializer("issued_at", "valid_until")
+    def serialize_datetimes(self, value: datetime) -> str:
+        return utc_iso(value)
+
+
 class MapDataOut(BaseModel):
     alerts: list[MapAlertOut]
     forecast_areas: list[MapForecastOut]
+    forecast_points: list[MapForecastPointOut] = Field(default_factory=list)
     generated_at: datetime
 
     @field_serializer("generated_at")

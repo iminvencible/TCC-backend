@@ -47,6 +47,28 @@ def _first_text(node, *names: str) -> str | None:
     return None
 
 
+def _field_values(node, name: str) -> list[str]:
+    """Include nested CAP metadata; reject ambiguous/conflicting distribution tags."""
+    return [
+        (child.text or "").strip().casefold()
+        for child in node.iter()
+        if _local_name(child.tag) == name
+    ]
+
+
+def _feed_entries(root) -> list:
+    """An RSS item wrapping a CAP alert is one warning, not two."""
+    entries = []
+    pending = [(root, False)]
+    while pending:
+        node, inside_entry = pending.pop()
+        candidate = _local_name(node.tag) in {"item", "entry", "alert"}
+        if candidate and not inside_entry:
+            entries.append(node)
+        pending.extend((child, inside_entry or candidate) for child in reversed(list(node)))
+    return entries
+
+
 def _parse_datetime(value: str | None, default: datetime) -> datetime:
     if not value:
         return default
@@ -115,9 +137,26 @@ def parse_warning_feed(
         root = ElementTree.fromstring(xml)
     except (ElementTree.ParseError, DefusedXmlException) as error:
         raise InmetError("O INMET retornou XML inválido") from error
-    entries = [node for node in root.iter() if _local_name(node.tag) in {"item", "entry", "alert"}]
+    entries = _feed_entries(root)
     warnings: list[NormalizedWarning] = []
-    for position, entry in enumerate(entries):
+    excluded = 0
+    for entry in entries:
+        # CAP marks test/exercise/draft messages and limited-audience messages.
+        # Legacy RSS items without these CAP fields remain supported, but when
+        # either field is present, every value must explicitly permit publishing.
+        statuses = _field_values(entry, "status")
+        scopes = _field_values(entry, "scope")
+        cap_alerts = [node for node in entry.iter() if _local_name(node.tag) == "alert"]
+        if (
+            any(
+                not _field_values(alert, "status") or not _field_values(alert, "scope")
+                for alert in cap_alerts
+            )
+            or any(value != "actual" for value in statuses)
+            or any(value != "public" for value in scopes)
+        ):
+            excluded += 1
+            continue
         identifier = _first_text(entry, "identifier", "guid", "id")
         if not identifier:
             continue
@@ -193,8 +232,12 @@ def parse_warning_feed(
             )
         )
     if not entries:
+        if _local_name(root.tag) in {"rss", "feed", "channel"}:
+            return []
         raise InmetError("O feed do INMET nao contem itens reconheciveis")
     if not warnings:
+        if excluded == len(entries):
+            return []
         raise InmetError("O feed do INMET não contém avisos completos e reconhecíveis")
     return warnings
 

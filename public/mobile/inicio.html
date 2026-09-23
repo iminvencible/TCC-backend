@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#063b91">
+  <meta name="theme-color" content="#081a36">
   <title>Início · PrevClima Móvel</title>
   <link rel="manifest" href="/mobile/manifest.webmanifest">
   <link rel="icon" href="/mobile/icon.svg" type="image/svg+xml">
@@ -14,33 +14,34 @@
 <body>
   <main class="mobile-frame mobile-dashboard">
     <header class="mobile-topbar">
-      <div><small id="mobile-location">Localização</small><strong id="mobile-user">PrevClima</strong></div>
-      <button id="mobile-logout" type="button" aria-label="Sair">Sair</button>
+      <div class="mobile-place"><span class="mobile-place-icon" aria-hidden="true">⌖</span><div><small>ACOMPANHANDO O TEMPO EM</small><strong id="mobile-location">Sua região</strong></div></div>
+      <button id="mobile-logout" class="mobile-logout" type="button" aria-label="Sair da conta" title="Sair da conta">↗</button>
     </header>
-    <section class="mobile-weather-card">
-      <span class="mobile-weather-icon" aria-hidden="true">🌦️</span>
-      <strong id="mobile-temperature">--°</strong>
-      <p id="mobile-condition">Carregando previsão...</p>
+    <div class="mobile-greeting"><span class="mobile-eyebrow">SEU BOLETIM DE HOJE</span><h1>Olá, <span id="mobile-user">você</span><span aria-hidden="true">.</span></h1><p>Informação para decidir com tranquilidade.</p></div>
+    <section class="mobile-weather-card" aria-labelledby="mobile-weather-title" aria-live="polite">
+      <div class="mobile-weather-top"><span class="mobile-eyebrow" id="mobile-weather-title">CONDIÇÕES AGORA</span><span class="mobile-weather-badge">PREVISÃO</span></div>
+      <div class="mobile-weather-main"><span class="mobile-weather-icon" aria-hidden="true">🌦️</span><div><strong id="mobile-temperature">--°</strong><p id="mobile-condition">Carregando previsão...</p></div></div>
       <div class="mobile-metrics">
-        <span><small>Umidade</small><strong id="mobile-humidity">--</strong></span>
-        <span><small>Vento</small><strong id="mobile-wind">--</strong></span>
-        <span><small>Chuva</small><strong id="mobile-rain">--</strong></span>
+        <span><small>UMIDADE</small><strong id="mobile-humidity">--</strong></span>
+        <span><small>VENTO</small><strong id="mobile-wind">--</strong></span>
+        <span><small>CHUVA</small><strong id="mobile-rain">--</strong></span>
       </div>
       <a id="mobile-source" class="mobile-source" target="_blank" rel="noopener noreferrer"></a>
     </section>
-    <section class="mobile-risk-card">
-      <span aria-hidden="true">⚠️</span>
-      <div><strong id="mobile-risk-title">Verificando avisos</strong><p id="mobile-risk-copy">Aguarde alguns instantes.</p></div>
+    <section class="mobile-risk-card" id="mobile-risk-card" aria-labelledby="mobile-risk-title" aria-live="polite">
+      <div class="mobile-risk-icon" aria-hidden="true">!</div>
+      <div><span class="mobile-eyebrow" id="mobile-risk-label">AVISOS EM MONITORAMENTO</span><h2 id="mobile-risk-title">Verificando avisos</h2><p id="mobile-risk-copy">Aguarde alguns instantes.</p></div>
+      <a class="mobile-risk-arrow" href="/alertas.html" aria-label="Ver todos os avisos">→</a>
     </section>
     <section class="mobile-section">
-      <header><h2>Avisos ativos</h2><a href="/alertas.html">Ver todos</a></header>
-      <div id="mobile-alerts" class="mobile-alert-list"><p>Carregando...</p></div>
+      <header><div><span class="mobile-eyebrow">FIQUE POR DENTRO</span><h2>Avisos ativos</h2></div><a href="/alertas.html">Ver todos <span aria-hidden="true">↗</span></a></header>
+      <div id="mobile-alerts" class="mobile-alert-list" aria-live="polite"><p class="mobile-list-state">Carregando avisos...</p></div>
     </section>
     <nav class="mobile-bottom-nav" aria-label="Navegação do aplicativo">
-      <a class="active" href="/mobile/inicio.html">⌂<span>Início</span></a>
-      <a href="/alertas.html">⚠<span>Avisos</span></a>
-      <a href="/mapa.html">⌖<span>Mapa</span></a>
-      <a href="/perfil.html">●<span>Perfil</span></a>
+      <a class="active" href="/mobile/inicio.html" aria-current="page"><span class="mobile-nav-icon" aria-hidden="true">⌂</span><span>Início</span></a>
+      <a href="/alertas.html"><span class="mobile-nav-icon" aria-hidden="true">⚠</span><span>Avisos</span></a>
+      <a href="/mapa.html"><span class="mobile-nav-icon" aria-hidden="true">⌖</span><span>Mapa</span></a>
+      <a href="/perfil.html"><span class="mobile-nav-icon" aria-hidden="true">◉</span><span>Perfil</span></a>
     </nav>
   </main>
 </body>

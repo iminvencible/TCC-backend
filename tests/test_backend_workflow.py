@@ -283,38 +283,36 @@ def test_inmet_update_only_supersedes_after_replacement_is_importable(db):
 
     now = datetime.now(UTC)
 
-    def update_xml(*, polygon: bool) -> bytes:
-        polygon_node = (
-            "<cap:polygon>-24.1,-46.9 -24.1,-46.1 -24.6,-46.1 -24.1,-46.9</cap:polygon>"
-            if polygon
-            else ""
-        )
+    def update_xml(*, complete: bool) -> bytes:
+        severity_node = "<cap:severity>Severe</cap:severity>" if complete else ""
         return f"""<?xml version="1.0" encoding="UTF-8"?>
         <rss xmlns:cap="urn:oasis:names:tc:emergency:cap:1.2"><channel><item>
           <guid>INMET-AVISO-ATUALIZADO-456</guid>
           <title>Aviso atualizado</title><description>Área atualizada pelo INMET.</description>
           <cap:msgType>Update</cap:msgType>
           <cap:references>inmet.gov.br,INMET-AVISO-123,2026-09-21T10:00:00Z</cap:references>
-          <cap:event>Tempestade</cap:event><cap:severity>Severe</cap:severity>
+          <cap:event>Tempestade</cap:event>{severity_node}
           <cap:effective>{now.isoformat()}</cap:effective>
           <cap:expires>{(now + timedelta(hours=3)).isoformat()}</cap:expires>
-          <cap:areaDesc>Litoral atualizado</cap:areaDesc>{polygon_node}
+          <cap:areaDesc>Litoral atualizado</cap:areaDesc>
         </item></channel></rss>""".encode()
 
     incomplete_client = InmetClient(
         settings,
         transport=httpx.MockTransport(
-            lambda _: httpx.Response(200, content=update_xml(polygon=False))
+            lambda _: httpx.Response(200, content=update_xml(complete=False))
         ),
     )
-    assert sync_inmet_warnings(db, actor=None, client=incomplete_client) == (0, 1)
+    with pytest.raises(InmetError):
+        sync_inmet_warnings(db, actor=None, client=incomplete_client)
     db.refresh(original)
     assert original.validation_status == "ACTIVE"
 
+    # A valid official UPDATE can omit geometry; it remains a text-only alert.
     complete_client = InmetClient(
         settings,
         transport=httpx.MockTransport(
-            lambda _: httpx.Response(200, content=update_xml(polygon=True))
+            lambda _: httpx.Response(200, content=update_xml(complete=True))
         ),
     )
     assert sync_inmet_warnings(db, actor=None, client=complete_client) == (1, 0)
@@ -323,10 +321,14 @@ def test_inmet_update_only_supersedes_after_replacement_is_importable(db):
     active = db.scalar(
         select(WeatherAlert).where(
             WeatherAlert.source_key != original.source_key,
+            WeatherAlert.origin == "INMET",
             WeatherAlert.validation_status == "ACTIVE",
         )
     )
     assert active is not None
+    assert active.polygon is None
+    assert active.latitude is None and active.longitude is None
+    assert sync_inmet_warnings(db, actor=None, client=complete_client) == (0, 1)
 
 
 def test_inmet_client_rejects_malformed_xml_and_untrusted_url():
