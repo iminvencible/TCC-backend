@@ -1,7 +1,10 @@
+import json
+import re
 from functools import lru_cache
+from typing import Annotated
 
 from pydantic import Field, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -11,7 +14,7 @@ class Settings(BaseSettings):
     jwt_secret: str = "development-secret-change-before-production"
     jwt_ttl_minutes: int = 60
     cookie_secure: bool = False
-    cors_origins: list[str] = ["http://localhost:8000"]
+    cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:8000"]
     seed_demo_data: bool = False
     seed_admin_email: str | None = None
     seed_admin_password: str | None = None
@@ -19,10 +22,12 @@ class Settings(BaseSettings):
     seed_meteorologist_password: str | None = None
     seed_user_email: str | None = None
     seed_user_password: str | None = None
+    inmet_observations_enabled: bool = False
+    inmet_station_codes: list[str] = Field(default_factory=list, max_length=50)
     inmet_enabled: bool = False
     inmet_warning_rss_url: str = "https://apiprevmet3.inmet.gov.br/avisos/rss"
-    inmet_timeout_seconds: float = 8.0
-    inmet_max_response_bytes: int = 2_000_000
+    inmet_timeout_seconds: float = Field(default=8.0, gt=0, le=60)
+    inmet_max_response_bytes: int = Field(default=2_000_000, ge=1, le=5_000_000)
     inmet_sync_interval_minutes: int = Field(default=60, ge=10, le=1440)
     inmet_user_agent: str = "PrevClima/0.1 (integracao academica)"
     open_meteo_enabled: bool = False
@@ -36,10 +41,20 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
+    @field_validator("inmet_station_codes")
+    @classmethod
+    def station_codes(cls, values: list[str]) -> list[str]:
+        codes = list(dict.fromkeys(value.strip().upper() for value in values))
+        if any(not re.fullmatch(r"[A-Z0-9]{3,16}", code) for code in codes):
+            raise ValueError("Código de estação INMET inválido")
+        return codes
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def parse_origins(cls, value: object) -> object:
         if isinstance(value, str):
+            if value.lstrip().startswith("["):
+                return json.loads(value)
             return [origin.strip() for origin in value.split(",") if origin.strip()]
         return value
 

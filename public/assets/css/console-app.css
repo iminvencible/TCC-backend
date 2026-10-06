@@ -1,0 +1,255 @@
+/* API-connected components layered on the supplied design system. */
+[hidden] {
+  display: none !important;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+.skip-link {
+  position: fixed;
+  left: 16px;
+  top: -80px;
+  z-index: 2000;
+  padding: 12px;
+  background: var(--surface);
+}
+.skip-link:focus {
+  top: 16px;
+}
+.brand-symbol {
+  display: grid;
+  place-items: center;
+  font-size: 38px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  color: #f5b301;
+  background: radial-gradient(circle, #1447d4, #020a24);
+  box-shadow: 0 0 22px #2f6bff77;
+}
+.site-link {
+  font-size: 12px;
+  color: #b9c8ee;
+}
+.console-map {
+  height: 360px;
+  border-radius: 12px;
+  overflow: hidden;
+  z-index: 1;
+  margin: 8px 0 12px;
+}
+.console-map.large {
+  height: calc(100vh - 235px);
+  min-height: 350px;
+}
+.leaflet-container {
+  font-family: inherit;
+}
+.data-card {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+.data-card:last-child {
+  border: 0;
+}
+.data-card p {
+  margin-top: 8px;
+}
+.data-card ul {
+  padding-left: 20px;
+  font-size: 13px;
+}
+.notice {
+  padding: 12px 16px;
+  background: var(--ok-t);
+  border: 1px solid var(--ok);
+  border-radius: 12px;
+  margin-bottom: 18px;
+}
+.notice.error,
+.error {
+  color: var(--crit);
+}
+.notice.error {
+  background: var(--crit-t);
+  border-color: var(--crit);
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin: 16px 0;
+}
+.full {
+  grid-column: 1/-1;
+}
+label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+}
+label .field {
+  margin-top: 6px;
+}
+.panel-b > .hint {
+  margin: 8px 0 14px;
+}
+.review-form {
+  padding: 12px;
+  background: var(--surface-2);
+  border-radius: 12px;
+}
+.review-form .field {
+  width: auto;
+  flex: 1;
+  min-width: 160px;
+}
+.row > .field {
+  width: auto;
+  flex: 1;
+  min-width: 150px;
+}
+.row > .grow {
+  min-width: 180px;
+}
+.table-scroll {
+  overflow: auto;
+  max-height: 650px;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+th,
+td {
+  padding: 12px 8px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  white-space: nowrap;
+}
+td small {
+  display: block;
+  color: var(--muted);
+}
+th {
+  background: var(--surface-2);
+  position: sticky;
+  top: 0;
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+dialog {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  max-width: 740px;
+  width: calc(100% - 32px);
+  max-height: 90vh;
+  padding: 24px;
+}
+dialog::backdrop {
+  background: #020a24bb;
+}
+.btn.danger {
+  color: var(--crit);
+}
+.stack > .panel {
+  min-width: 0;
+}
+#page > div {
+  min-width: 0;
+}
+.scrim {
+  border: 0;
+}
+.field {
+  min-width: 0;
+}
+#accounts {
+  margin-top: 20px;
+}
+a.btn {
+  display: inline-flex;
+}
+.leaflet-popup-content {
+  color: #0b1a3a;
+}
+#station-filter {
+  margin-bottom: 18px;
+}
+#station-meta {
+  margin-top: 8px;
+}
+@media (max-width: 1100px) {
+  .two,
+  .dash {
+    grid-template-columns: 1fr;
+  }
+  .main {
+    padding: 0 20px 32px;
+  }
+  .sync {
+    font-size: 11px;
+  }
+  .kpi {
+    padding: 16px;
+  }
+  .kpi-n {
+    font-size: 28px;
+  }
+}
+@media (max-width: 600px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .kpi {
+    border-bottom: 1px solid var(--border);
+  }
+  .main {
+    padding: 0 14px 24px;
+  }
+  .ttl h1 {
+    font-size: 21px;
+  }
+  .ttl p {
+    font-size: 12px;
+  }
+  .sync {
+    display: none;
+  }
+  .console-map {
+    height: 300px;
+  }
+  .toolbar {
+    align-items: stretch;
+  }
+  .toolbar .btn {
+    flex: 1;
+  }
+  .form-grid .full {
+    grid-column: auto;
+  }
+  dialog {
+    padding: 16px;
+  }
+  .top {
+    padding-top: 18px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

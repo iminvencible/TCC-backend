@@ -1,66 +1,75 @@
 <!doctype html>
-<html lang="pt-BR">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>PrevClima - Painel profissional</title>
-  <link rel="stylesheet" href="/assets/css/styles.css">
-  <script src="/assets/js/api.js" defer></script>
-  <script src="/assets/js/shell.js" defer></script>
-  <script src="/assets/js/professional.js" defer></script>
-</head>
-<body>
-  <header class="topbar">
-    <a class="brand" href="/profissional.html"><span class="brand-mark">&#9889;</span> Prev<span>Clima</span></a>
-    <nav class="desktop-nav" data-role-navigation aria-label="Navegação principal"></nav>
-    <span class="role-identity" data-role-identity></span>
-  </header>
-  <main class="professional-shell">
-    <header class="professional-heading">
-      <div><span class="eyebrow">Operação meteorológica</span><h1>Painel profissional</h1><p class="muted">Emita alertas diretos e revise relatos enviados pela comunidade.</p></div>
-      <button id="professional-logout" class="button secondary compact-button" type="button">Sair</button>
-    </header>
-    <div class="stats-row">
-      <article class="stat-card"><span class="muted">Alertas ativos</span><strong id="active-alert-total">--</strong></article>
-      <article class="stat-card"><span class="muted">Relatos pendentes</span><strong id="pending-report-total">--</strong></article>
-      <article class="stat-card"><span class="muted">Sessão</span><strong id="professional-role">--</strong></article>
-    </div>
-    <div class="dashboard-grid">
-      <section class="dashboard-panel">
-        <div class="dashboard-panel-header"><div><h2>Emitir alerta</h2><p class="muted">O alerta publicado é permanente e não poderá ser editado ou excluído.</p></div></div>
-        <form id="alert-form">
-          <div class="form-grid">
-            <div class="field span-2"><label for="alert-title">Título</label><input id="alert-title" maxlength="140" required></div>
-            <div class="field"><label for="event-type">Evento</label><select id="event-type" required><option value="SEVERE_STORM">Tempestade severa</option><option value="TORNADO">Tornado</option><option value="WINDSTORM">Vendaval</option><option value="HEAVY_RAIN">Chuva intensa</option></select></div>
-            <div class="field"><label for="severity">Gravidade</label><select id="severity" required><option value="MODERATE">Moderado</option><option value="HIGH">Alto</option><option value="CRITICAL">Crítico</option><option value="LOW">Baixo</option></select></div>
-            <div class="field span-2"><label for="area-name">Área afetada</label><input id="area-name" maxlength="160" placeholder="Ex.: Litoral Sul de São Paulo" required></div>
-            <div class="field span-2"><label for="alert-message">Descrição do risco</label><textarea id="alert-message" minlength="10" maxlength="5000" required></textarea></div>
-            <div class="field"><label for="alert-latitude">Latitude central</label><input id="alert-latitude" type="number" min="-90" max="90" step="any" required></div>
-            <div class="field"><label for="alert-longitude">Longitude central</label><input id="alert-longitude" type="number" min="-180" max="180" step="any" required></div>
-            <div class="field"><label for="radius-km">Raio (km)</label><input id="radius-km" type="number" min="0.1" max="1000" step="0.1" required></div>
-            <div class="field"><label for="valid-until">Válido até</label><input id="valid-until" type="datetime-local" required></div>
-            <div class="field span-2"><label for="recommendations">Recomendações</label><textarea id="recommendations" placeholder="Uma recomendação por linha" required></textarea></div>
+<html lang="pt-BR" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>PrevClima · Painel meteorológico</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin="anonymous"
+    />
+    <link rel="stylesheet" href="/assets/css/console.css" />
+    <link rel="stylesheet" href="/assets/css/console-app.css" />
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin="anonymous"
+      defer
+    ></script>
+    <script src="/assets/js/api.js" defer></script>
+    <script src="/assets/js/console/app.js" type="module"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#page">Ir para o conteúdo</a>
+    <div id="root" class="app">
+      <aside class="side" aria-label="Menu principal">
+        <a class="brand" href="#dashboard"
+          ><span class="brand-symbol" aria-hidden="true">◉</span>
+          <div>
+            <div class="wordmark"><span>Prev</span><b>Clima</b></div>
+            <small>Central meteorológica</small>
+          </div></a
+        >
+        <nav id="nav" aria-label="Navegação do painel"></nav>
+        <div class="side-foot">
+          <div class="me">
+            <span id="avatar" class="avatar"></span>
+            <div>
+              <strong id="identity-name">Carregando…</strong
+              ><small id="identity-role"></small>
+            </div>
           </div>
-          <p id="alert-form-message" class="error" role="status"></p>
-          <button class="button" type="submit">Publicar alerta</button>
-        </form>
-      </section>
-      <section class="dashboard-panel">
-        <div class="dashboard-panel-header"><div><h2>Relatos para análise</h2><p class="muted">Aprovar ou rejeitar conclui a revisão.</p></div><button id="refresh-reports" class="button secondary" type="button">Atualizar</button></div>
-        <div id="review-queue" class="dashboard-list" aria-live="polite"><p class="loading">Carregando relatos...</p></div>
-      </section>
-    </div>
-    <section class="dashboard-panel full-panel">
-      <div class="dashboard-panel-header">
-        <div><h2>Qualidade dos avisos</h2><p class="muted">Marque um aviso como alarme falso ou como pendente de correção. A decisão fica registrada no histórico.</p></div>
-        <div class="inline-actions">
-          <button id="sync-inmet" class="button secondary" type="button">Sincronizar INMET</button>
-          <button id="refresh-alert-review" class="button secondary" type="button">Atualizar</button>
+          <div class="side-tools">
+            <button id="theme" class="icon-btn" aria-label="Alternar tema">
+              ◐ Tema</button
+            ><button id="logout" class="icon-btn">Sair ↗</button>
+          </div>
+          <a class="site-link" href="/inicio.html">Abrir site público ↗</a>
         </div>
+      </aside>
+      <button class="scrim" aria-label="Fechar menu"></button>
+      <div class="main">
+        <header class="top">
+          <button id="menu" class="icon-btn menu-btn" aria-label="Abrir menu">
+            ☰
+          </button>
+          <div class="ttl">
+            <h1 id="page-title">Painel meteorológico</h1>
+            <p id="page-sub">Situação atual das regiões monitoradas</p>
+          </div>
+          <span id="sync-status" class="sync">Consultando dados</span>
+        </header>
+        <p id="notice" role="status" class="notice" hidden></p>
+        <main id="page" tabindex="-1">
+          <p class="empty">Verificando sua sessão…</p>
+        </main>
       </div>
-      <p id="alert-review-message" class="helper" role="status"></p>
-      <div id="alert-review-list" class="dashboard-list" aria-live="polite"><p class="loading">Carregando avisos...</p></div>
-    </section>
-  </main>
-</body>
+    </div>
+    <dialog id="editor" aria-label="Editor de alerta"></dialog>
+  </body>
 </html>

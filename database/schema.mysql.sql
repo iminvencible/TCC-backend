@@ -1,5 +1,4 @@
--- Generated from migrations/ for MySQL 8. Apply with `alembic upgrade head` when possible.
--- Demonstration inserts live in database/demo_seed.sql and app/seed.py.
+-- Generated from Alembic migrations for MySQL 8; use alembic upgrade head for existing databases.
 
 CREATE TABLE alembic_version (
     version_num VARCHAR(32) NOT NULL,
@@ -177,28 +176,37 @@ CREATE TABLE alert_reads (
     CONSTRAINT uq_alert_read_user_alert UNIQUE (user_id, alert_id)
 );
 
+INSERT INTO alembic_version (version_num) VALUES ('b6f535f44c51');
+
 -- Running upgrade b6f535f44c51 -> 9d62a8f410be
 
 UPDATE roles SET code = 'ADMIN', display_name = 'Administrador' WHERE code = 'OWNER';
-UPDATE roles SET display_name = 'Usuário' WHERE code = 'USER';
 
-ALTER TABLE weather_alerts
-    ADD COLUMN origin VARCHAR(16) NOT NULL DEFAULT 'MANUAL',
-    ADD COLUMN source_name VARCHAR(120) NOT NULL DEFAULT 'PrevClima',
-    ADD COLUMN source_url VARCHAR(500),
-    ADD COLUMN validation_status VARCHAR(24) NOT NULL DEFAULT 'ACTIVE',
-    ADD COLUMN status_reason TEXT,
-    ADD COLUMN status_changed_by INTEGER,
-    ADD COLUMN status_changed_at DATETIME,
-    ADD CONSTRAINT ck_alert_origin CHECK (origin IN ('DEMO', 'MANUAL', 'INMET')),
-    ADD CONSTRAINT ck_alert_validation_status CHECK (validation_status IN ('ACTIVE', 'FALSE_ALARM', 'NEEDS_CORRECTION')),
-    ADD CONSTRAINT fk_weather_alerts_status_changed_by_users FOREIGN KEY(status_changed_by) REFERENCES users (id) ON DELETE SET NULL;
+UPDATE roles SET display_name = 'Usu�rio' WHERE code = 'USER';
+
+ALTER TABLE weather_alerts ADD COLUMN origin VARCHAR(16) NOT NULL DEFAULT 'MANUAL';
+
+ALTER TABLE weather_alerts ADD COLUMN source_name VARCHAR(120) NOT NULL DEFAULT 'PrevClima';
+
+ALTER TABLE weather_alerts ADD COLUMN source_url VARCHAR(500);
+
+ALTER TABLE weather_alerts ADD COLUMN validation_status VARCHAR(24) NOT NULL DEFAULT 'ACTIVE';
+
+ALTER TABLE weather_alerts ADD COLUMN status_reason TEXT;
+
+ALTER TABLE weather_alerts ADD COLUMN status_changed_by INTEGER;
+
+ALTER TABLE weather_alerts ADD COLUMN status_changed_at DATETIME;
+
+ALTER TABLE weather_alerts ADD CONSTRAINT ck_alert_origin CHECK (origin IN ('DEMO', 'MANUAL', 'INMET'));
+
+ALTER TABLE weather_alerts ADD CONSTRAINT ck_alert_validation_status CHECK (validation_status IN ('ACTIVE', 'FALSE_ALARM', 'NEEDS_CORRECTION'));
+
+ALTER TABLE weather_alerts ADD CONSTRAINT fk_weather_alerts_status_changed_by_users FOREIGN KEY(status_changed_by) REFERENCES users (id) ON DELETE SET NULL;
 
 CREATE INDEX ix_alerts_validation ON weather_alerts (validation_status, valid_until);
 
-UPDATE weather_alerts
-SET origin = 'DEMO', source_name = 'PrevClima - demonstracao'
-WHERE is_demo = TRUE;
+UPDATE weather_alerts SET origin = 'DEMO', source_name = 'PrevClima - demonstracao' WHERE is_demo = TRUE;
 
 CREATE TABLE alert_reviews (
     id INTEGER NOT NULL AUTO_INCREMENT,
@@ -231,23 +239,73 @@ CREATE TABLE audit_events (
 
 CREATE INDEX ix_audit_target_created ON audit_events (target_type, target_id, created_at);
 
+UPDATE alembic_version SET version_num='9d62a8f410be' WHERE alembic_version.version_num = 'b6f535f44c51';
+
 -- Running upgrade 9d62a8f410be -> 4a8c1e7d2b90
 
 ALTER TABLE forecasts ADD COLUMN source_url VARCHAR(500);
 
+UPDATE alembic_version SET version_num='4a8c1e7d2b90' WHERE alembic_version.version_num = '9d62a8f410be';
+
 -- Running upgrade 4a8c1e7d2b90 -> 5f0e7c29b4a1
 
-ALTER TABLE forecasts
-    ADD COLUMN latitude NUMERIC(9, 6),
-    ADD COLUMN longitude NUMERIC(9, 6),
-    ADD CONSTRAINT ck_forecast_lat CHECK (latitude IS NULL OR latitude BETWEEN -90 AND 90),
-    ADD CONSTRAINT ck_forecast_lon CHECK (longitude IS NULL OR longitude BETWEEN -180 AND 180),
-    ADD CONSTRAINT ck_forecast_coordinates_pair CHECK ((latitude IS NULL AND longitude IS NULL) OR (latitude IS NOT NULL AND longitude IS NOT NULL));
+ALTER TABLE forecasts ADD COLUMN latitude NUMERIC(9, 6);
+
+ALTER TABLE forecasts ADD COLUMN longitude NUMERIC(9, 6);
+
+ALTER TABLE forecasts ADD CONSTRAINT ck_forecast_lat CHECK (latitude IS NULL OR latitude BETWEEN -90 AND 90);
+
+ALTER TABLE forecasts ADD CONSTRAINT ck_forecast_lon CHECK (longitude IS NULL OR longitude BETWEEN -180 AND 180);
+
+ALTER TABLE forecasts ADD CONSTRAINT ck_forecast_coordinates_pair CHECK ((latitude IS NULL AND longitude IS NULL) OR (latitude IS NOT NULL AND longitude IS NOT NULL));
 
 CREATE INDEX ix_forecasts_coords_valid ON forecasts (latitude, longitude, valid_until);
 
-ALTER TABLE weather_alerts
-    DROP CHECK ck_alert_has_area,
-    ADD CONSTRAINT ck_alert_has_area CHECK (origin = 'INMET' OR polygon IS NOT NULL OR (latitude IS NOT NULL AND longitude IS NOT NULL AND radius_km IS NOT NULL));
+ALTER TABLE weather_alerts DROP CHECK ck_alert_has_area;
 
-INSERT INTO alembic_version (version_num) VALUES ('5f0e7c29b4a1');
+ALTER TABLE weather_alerts ADD CONSTRAINT ck_alert_has_area CHECK (origin = 'INMET' OR polygon IS NOT NULL OR (latitude IS NOT NULL AND longitude IS NOT NULL AND radius_km IS NOT NULL));
+
+UPDATE alembic_version SET version_num='5f0e7c29b4a1' WHERE alembic_version.version_num = '4a8c1e7d2b90';
+
+-- Running upgrade 5f0e7c29b4a1 -> 3b6f82078bcf
+
+CREATE TABLE weather_stations (
+    code VARCHAR(16) NOT NULL,
+    name VARCHAR(120) NOT NULL,
+    state VARCHAR(2),
+    kind VARCHAR(20) NOT NULL,
+    latitude NUMERIC(9, 6),
+    longitude NUMERIC(9, 6),
+    updated_at DATETIME NOT NULL,
+    PRIMARY KEY (code),
+    CONSTRAINT ck_station_lat CHECK (latitude IS NULL OR latitude BETWEEN -90 AND 90),
+    CONSTRAINT ck_station_lon CHECK (longitude IS NULL OR longitude BETWEEN -180 AND 180)
+);
+
+CREATE INDEX ix_stations_state_name ON weather_stations (state, name);
+
+CREATE TABLE station_observations (
+    id INTEGER NOT NULL AUTO_INCREMENT,
+    station_code VARCHAR(16) NOT NULL,
+    observed_at DATETIME NOT NULL,
+    period VARCHAR(10) NOT NULL,
+    temperature_c NUMERIC(6, 2),
+    minimum_c NUMERIC(6, 2),
+    maximum_c NUMERIC(6, 2),
+    humidity NUMERIC(5, 2),
+    precipitation_mm NUMERIC(9, 2),
+    wind_ms NUMERIC(6, 2),
+    source VARCHAR(32) NOT NULL,
+    imported_at DATETIME NOT NULL,
+    PRIMARY KEY (id),
+    CONSTRAINT ck_observation_period CHECK (period IN ('HOURLY', 'DAILY', 'MONTHLY')),
+    CONSTRAINT ck_observation_humidity CHECK (humidity IS NULL OR humidity BETWEEN 0 AND 100),
+    CONSTRAINT ck_observation_rain CHECK (precipitation_mm IS NULL OR precipitation_mm >= 0),
+    CONSTRAINT ck_observation_wind CHECK (wind_ms IS NULL OR wind_ms >= 0),
+    FOREIGN KEY(station_code) REFERENCES weather_stations (code) ON DELETE RESTRICT,
+    CONSTRAINT uq_station_observation UNIQUE (station_code, observed_at, period)
+);
+
+CREATE INDEX ix_observations_time ON station_observations (observed_at);
+
+UPDATE alembic_version SET version_num='3b6f82078bcf' WHERE alembic_version.version_num = '5f0e7c29b4a1';

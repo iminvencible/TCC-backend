@@ -36,6 +36,7 @@ services:
       SEED_USER_PASSWORD: ${SEED_USER_PASSWORD:-}
       INMET_WARNING_RSS_URL: ${INMET_WARNING_RSS_URL:-https://apiprevmet3.inmet.gov.br/avisos/rss}
       INMET_ENABLED: ${INMET_ENABLED:-true}
+      INMET_OBSERVATIONS_ENABLED: ${INMET_OBSERVATIONS_ENABLED:-true}
       INMET_TIMEOUT_SECONDS: ${INMET_TIMEOUT_SECONDS:-8}
       INMET_MAX_RESPONSE_BYTES: ${INMET_MAX_RESPONSE_BYTES:-2000000}
       OPEN_METEO_ENABLED: ${OPEN_METEO_ENABLED:-true}
@@ -72,6 +73,25 @@ services:
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       INMET_ENABLED: ${INMET_ENABLED:-true}
       INMET_WARNING_RSS_URL: ${INMET_WARNING_RSS_URL:-https://apiprevmet3.inmet.gov.br/avisos/rss}
+      INMET_TIMEOUT_SECONDS: ${INMET_TIMEOUT_SECONDS:-8}
+      INMET_MAX_RESPONSE_BYTES: ${INMET_MAX_RESPONSE_BYTES:-2000000}
+      INMET_SYNC_INTERVAL_MINUTES: ${INMET_SYNC_INTERVAL_MINUTES:-60}
+
+  station-worker:
+    image: prevclima-api:local
+    command: ["python", "-m", "app.sync_stations", "--loop"]
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      DATABASE_URL: ${DATABASE_URL:-mysql+pymysql://prevclima:change-me@db:3306/prevclima?charset=utf8mb4}
+      JWT_SECRET: ${JWT_SECRET:-development-secret-change-before-production}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:18080,http://127.0.0.1:18080}
+      INMET_OBSERVATIONS_ENABLED: ${INMET_OBSERVATIONS_ENABLED:-true}
+      INMET_STATION_CODES: ${INMET_STATION_CODES:-[]}
       INMET_TIMEOUT_SECONDS: ${INMET_TIMEOUT_SECONDS:-8}
       INMET_MAX_RESPONSE_BYTES: ${INMET_MAX_RESPONSE_BYTES:-2000000}
       INMET_SYNC_INTERVAL_MINUTES: ${INMET_SYNC_INTERVAL_MINUTES:-60}

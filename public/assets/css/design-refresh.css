@@ -1,0 +1,75 @@
+/* Shared public-site palette matching the administration template. */
+:root {
+  --bg: #040c24;
+  --bg-strong: #0a1734;
+  --panel: #0a1734;
+  --panel-soft: #0e1f45;
+  --line: #1b3163;
+  --text: #e9efff;
+  --muted: #93a6d1;
+  --cyan: #7ea5ff;
+  --blue: #3a74ff;
+  --yellow: #f5b301;
+  --surface-inset: #0e1f45;
+  --surface-frost: #0a1734ee;
+  --body-background: #040c24;
+  --shadow: 0 1px 2px #0006, 0 10px 30px #0005;
+  --radius: 16px;
+  font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
+}
+:root.light {
+  --bg: #eef2f9;
+  --bg-strong: #fff;
+  --panel: #fff;
+  --panel-soft: #f3f6fc;
+  --line: #d6dfef;
+  --text: #0b1a3a;
+  --muted: #52648a;
+  --cyan: #1447d4;
+  --blue: #1447d4;
+  --surface-inset: #f3f6fc;
+  --surface-frost: #fffffff0;
+  --body-background: #eef2f9;
+  --shadow: 0 1px 2px #0b1a3a0f, 0 10px 30px #0b1a3a12;
+}
+.auth-story {
+  background: linear-gradient(180deg, #020a24, #031a55 58%, #06308f);
+  border-radius: 0;
+}
+.auth-story h2 em {
+  color: #f5b301;
+}
+.auth-shell {
+  border-radius: 0;
+}
+.button {
+  border-radius: 12px;
+}
+.auth-card {
+  box-shadow: none;
+}
+.brand-mark {
+  background: #1447d4;
+  color: #f5b301;
+}
+.auth-brand h1 span,
+.brand > span:last-child {
+  color: #f5b301;
+}
+.topbar {
+  border-color: var(--line);
+}
+.dashboard-panel,
+.weather-card,
+.news-card,
+.alert-card {
+  border-radius: 16px;
+}
+.auth-story-art {
+  filter: none;
+}
+.auth-story .story-core {
+  background: #1447d4;
+  border-color: #f5b301;
+  color: #f5b301;
+}

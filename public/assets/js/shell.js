@@ -45,6 +45,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     ["/inicio.html", "Início"],
     ["/alertas.html", "Alertas"],
     ["/mapa.html", "Mapa"],
+    ["/estacoes.html", "Estações INMET"],
   ];
   if (user && user.role === "USER") links.push(["/perfil.html", "Perfil"]);
   if (user && user.role === "METEOROLOGIST") {

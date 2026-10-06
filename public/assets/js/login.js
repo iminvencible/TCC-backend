@@ -17,7 +17,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   try {
     const user = await PrevClima.request("/users/me");
     if (!professional || ["METEOROLOGIST", "ADMIN"].includes(user.role)) {
-      window.location.replace(destination);
+      window.location.replace(professional && !next
+        ? (user.role === "ADMIN" ? "/admin.html" : "/profissional.html")
+        : destination);
       return;
     }
     message.textContent = "Esta conta não possui acesso profissional.";

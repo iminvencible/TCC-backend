@@ -110,10 +110,11 @@ está indisponível. Os avisos expiram pelo prazo indicado pela fonte; dados sal
 significam que um aviso expirado seja exibido como ativo. Avisos sem polígono
 parseável são preservados como informação textual e não recebem área inventada.
 
-Não foi encontrada documentação formal ou contrato para uma API JSON de previsão
-nas páginas oficiais do INMET consultadas. Por isso, o projeto usa apenas o feed
-oficial de avisos do INMET e obtém a previsão pelo Open-Meteo, sem depender de uma
-rota não documentada.
+As previsões continuam vindo do Open-Meteo. Observações de estações são consultadas
+separadamente no host oficial `https://apitempo.inmet.gov.br`, pelas rotas
+`/estacoes/T` e `/estacao/{inicio}/{fim}/{codigo}`. Esses endpoints não possuem um
+contrato de disponibilidade garantido pelo projeto: falhas retornam 503 e preservam
+o histórico. Medições observadas não são apresentadas como previsão.
 
 Variáveis disponíveis:
 
@@ -144,6 +145,10 @@ oficial. Não trate ausência de avisos no mapa como ausência de risco.
 
 ## Banco de dados
 
+O [MER](database/MER.md) documenta entidades, cardinalidades, chaves, unidades e
+regras de integridade. A revisão `3b6f82078bcf` acrescenta `weather_stations` e
+`station_observations`, sem remover contas, previsões ou avisos existentes.
+
 - `migrations/` é a fonte executável e versionada do esquema.
 - A revisão `9d62a8f410be` migra `OWNER` para `ADMIN`, adiciona origem e situação dos
   avisos, histórico de revisão e eventos de auditoria.
@@ -154,6 +159,57 @@ oficial. Não trate ausência de avisos no mapa como ausência de risco.
 - `database/demo_seed.sql` contém dados meteorológicos demonstrativos sem senhas.
 - `python -m app.seed` cria funções, contas locais com hash e dados de demonstração
   de forma repetível.
+
+## Painel conectado e importação INMET
+
+`/painel.html`, `/admin.html` e `/profissional.html` abrem a nova central visual,
+adaptada do HTML fornecido. CSS, componentes de interface, mapa e estação foram
+separados em arquivos. Não há sessão, alertas ou contas simulados em localStorage.
+O administrador gerencia contas; o meteorologista emite e revisa avisos e relatos.
+Ambos consultam estações. Autorização e CSRF continuam sendo verificados na API.
+O site e o aplicativo também oferecem consulta pública em `/estacoes.html`, usando
+o mesmo catálogo e histórico persistido.
+O protótipo simulava push e alcance; a versão conectada publica avisos no site e
+no app, sem afirmar entrega de push que não ocorreu.
+
+| Rota | Operação |
+| --- | --- |
+| `GET /api/v1/dashboard` | Contadores e atividade real; acesso profissional |
+| `GET /api/v1/stations` | Catálogo; filtros `state`, `search`, `limit`, `offset` |
+| `POST /api/v1/stations/sync-catalog` | Atualizar catálogo oficial; administrador ou meteorologista |
+| `POST /api/v1/stations/{code}/sync` | Consultar intervalo `{start, end}` de até 31 dias |
+| `GET /api/v1/stations/{code}/observations` | Histórico; filtros `start`, `end`, `period`, `limit`, `offset` |
+| `POST /api/v1/stations/import` | Importação autenticada de histórico (até 2 MB e 10.000 linhas) |
+
+Configure `INMET_OBSERVATIONS_ENABLED=true` para consultas remotas. O serviço
+`station-worker` consulta a lista JSON `INMET_STATION_CODES` no intervalo de
+`INMET_SYNC_INTERVAL_MINUTES`. Uma lista vazia não faz consultas; selecione apenas
+as estações monitoradas. Fora do Docker, execute `python -m app.sync_stations --loop`.
+
+Os dois projetos solicitados foram usados como referências de compatibilidade:
+
+- [Felipeandradee/INMET-API-REST](https://github.com/Felipeandradee/INMET-API-REST):
+  salve a lista retornada por `ScrapperINMET.get_dados()` como JSON e selecione
+  **INMET-API-REST · JSON** no painel.
+- [fabinhojorge/INMET-API-temperature](https://github.com/fabinhojorge/INMET-API-temperature):
+  importe o CSV separado por ponto e vírgula com `CodigoOMM`, `Data`, `Hora` e
+  medidas. Selecione **Horário / DAYFULL**, **Diário** ou **Mensal** conforme o
+  conteúdo. As amostras DAYFULL e MONTH do projeto são compatíveis.
+
+Esses projetos extraem dados históricos do BDMEP e usam fluxos antigos de login e
+scraping. O PrevClima não executa o ChromeDriver antigo nem armazena credenciais
+BDMEP; importa seus resultados por adaptadores próprios. `-9999`, campos vazios e
+valores fora da faixa viram `null`; zero de chuva continua sendo zero. Reimportar
+a mesma estação, horário UTC e período atualiza a medição sem duplicá-la. A origem
+`BDMEP` e a data original permanecem visíveis. Vento medido usa m/s; previsões
+existentes usam km/h e mantêm seu próprio contrato.
+
+Validação desta revisão: sincronização real de 672 estações pelo painel; parsing
+de 4.633 registros DAYFULL e 3.847 mensais dos exemplos do projeto de temperatura;
+respostas de medições, idempotência e indisponibilidade cobertas por testes.
+O endpoint de medições não respondeu com dados válidos na consulta ao vivo deste
+ambiente. Uma sincronização de medições ao vivo ainda precisa ser verificada na
+rede de implantação. Consulte `docker compose logs station-worker inmet-worker`.
 
 Para desenvolvimento sem Docker:
 

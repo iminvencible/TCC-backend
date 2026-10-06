@@ -3,6 +3,16 @@ import pytest
 from app.config import Settings
 
 
+def test_cors_environment_accepts_example_and_json(monkeypatch):
+    monkeypatch.setenv("CORS_ORIGINS", "http://localhost:18080,http://127.0.0.1:18080")
+    assert Settings(_env_file=None).cors_origins == [
+        "http://localhost:18080",
+        "http://127.0.0.1:18080",
+    ]
+    monkeypatch.setenv("CORS_ORIGINS", '["https://prevclima.example"]')
+    assert Settings(_env_file=None).cors_origins == ["https://prevclima.example"]
+
+
 def test_production_rejects_development_defaults():
     settings = Settings(
         app_env="production",

@@ -24,8 +24,15 @@ def list_users(
     db: DbSession,
     search: str | None = Query(default=None, max_length=120),
     limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
 ):
-    query = select(User).where(User.is_active.is_(True)).order_by(User.name).limit(limit)
+    query = (
+        select(User)
+        .where(User.is_active.is_(True))
+        .order_by(User.name, User.id)
+        .limit(limit)
+        .offset(offset)
+    )
     if search:
         term = f"%{search.strip()}%"
         query = query.where(

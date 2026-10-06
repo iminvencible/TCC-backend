@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PrevClima · Observações INMET</title>
+    <link rel="stylesheet" href="/assets/css/console.css" />
+    <link rel="stylesheet" href="/assets/css/console-app.css" />
+    <script src="/assets/js/api.js" defer></script>
+    <script src="/assets/js/console/public-stations.js" type="module"></script>
+  </head>
+  <body>
+    <main class="main public-stations">
+      <header class="top">
+        <a class="btn" href="/inicio.html">← Início</a>
+        <div class="ttl">
+          <h1>Observações INMET</h1>
+          <p>Temperatura e medições registradas pelas estações</p>
+        </div>
+      </header>
+      <p id="notice" class="notice" role="status" hidden></p>
+      <div id="station-page"><p class="empty">Carregando estações…</p></div>
+      <p class="hint">
+        A data da observação indica quando a medição ocorreu. O histórico pode
+        conter lacunas e não substitui a previsão ou os avisos oficiais.
+      </p>
+    </main>
+  </body>
+</html>

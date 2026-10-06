@@ -13,7 +13,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.config import get_settings
 from app.database import engine
-from app.routers import admin, auth, content, inmet, users, weather
+from app.routers import admin, auth, content, dashboard, inmet, stations, users, weather
 
 settings = get_settings()
 
@@ -120,6 +120,8 @@ app.include_router(weather.router, prefix="/api/v1")
 app.include_router(content.router, prefix="/api/v1")
 app.include_router(inmet.router, prefix="/api/v1")
 app.include_router(admin.router, prefix="/api/v1")
+app.include_router(stations.router, prefix="/api/v1")
+app.include_router(dashboard.router, prefix="/api/v1")
 
 public_dir = Path(__file__).resolve().parent.parent / "public"
 app.mount("/", StaticFiles(directory=public_dir, html=True), name="public")
