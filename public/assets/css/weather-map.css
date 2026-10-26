@@ -1,0 +1,58 @@
+.weather-map-page { background: var(--bg); }
+.map-back { color: var(--muted); font-size: 13px; white-space: nowrap; }
+.map-workspace { display: grid; grid-template-columns: 370px minmax(0, 1fr); height: calc(100dvh - 77px); }
+.map-sidebar { overflow-y: auto; padding: 28px; border-right: 1px solid var(--line); scrollbar-width: thin; }
+.map-intro h1 { font-size: 36px; letter-spacing: -.06em; line-height: 1.12; margin: 12px 0; }
+.map-intro h1 span { color: var(--cyan); }
+.map-intro > p, .map-source-note { color: var(--muted); font-size: 13px; line-height: 1.65; }
+.map-search { display: grid; grid-template-columns: minmax(0, 1fr) 76px; gap: 10px; margin-top: 24px; }
+.map-search .field { margin: 0; min-width: 0; }
+.map-search select { padding-inline: 10px; }
+.map-search > button { grid-column: 1 / -1; justify-content: space-between; }
+.map-actions { display: flex; gap: 8px; margin-top: 9px; }
+.map-actions button { font-size: 12px; padding: 12px 8px; }
+.map-status { font-size: 12px; color: var(--muted); line-height: 1.6; min-height: 20px; margin: 16px 0; }
+.map-forecast { border: 1px solid var(--line); border-radius: 18px; padding: 20px; background: linear-gradient(135deg, #144b69, #102c47); color: #f3f9fc; }
+.map-forecast h2 { margin: 4px 0 16px; font-size: 19px; letter-spacing: -.03em; }
+.map-forecast .point-temperature { font-size: 52px; font-weight: 500; letter-spacing: -.06em; }
+.map-forecast p { color: #c2d9e8; font-size: 13px; line-height: 1.5; margin: 8px 0; }
+.map-forecast a { color: #b9e9ff; font-size: 12px; text-decoration: underline; }
+.map-forecast .data-tag { background: #ffffff16; border: 1px solid #ffffff30; display: inline-block; padding: 4px 8px; border-radius: 6px; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; }
+.map-layers { padding: 20px 0; border-bottom: 1px solid var(--line); }
+.map-layers summary { cursor: pointer; font-size: 13px; font-weight: 700; padding: 8px 0; }
+.map-layers label { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 13px; cursor: pointer; }
+.map-layers input { accent-color: #239aab; width: 17px; height: 17px; }
+.layer-dot, .map-key i { width: 9px; height: 9px; display: inline-block; border-radius: 50%; flex-shrink: 0; }
+.forecast-dot { background: #258cce; }.warning-dot { background: #e57928; }
+.map-layers p, .map-list-help { font-size: 12px; color: var(--muted); line-height: 1.55; margin: 6px 0; }
+.feed-health { padding: 20px 0; border-bottom: 1px solid var(--line); }
+.feed-health p { color: var(--muted); font-size: 12px; line-height: 1.6; margin-bottom: 0; }
+.map-section-title { display: flex; align-items: center; justify-content: space-between; margin-top: 22px; }
+.map-section-title h2 { font-size: 17px; margin: 0; }.map-section-title > span { border-radius: 7px; background: var(--panel-soft); padding: 5px 9px; font-size: 12px; }
+.map-warning-list { list-style: none; margin: 14px 0; padding: 0; display: grid; gap: 10px; }
+.map-warning-list li { padding: 14px; border: 1px solid var(--line); border-left: 3px solid var(--warning-color, var(--line)); border-radius: 10px; background: var(--panel); }
+.map-warning-list button { text-align: left; color: var(--text); background: none; border: 0; cursor: pointer; font: inherit; font-weight: 700; padding: 6px 0; min-height: 44px; width: 100%; }
+.map-warning-list p { color: var(--muted); font-size: 12px; margin: 6px 0; line-height: 1.55; }
+.map-warning-list a, .map-source-note a { color: var(--cyan); text-decoration: underline; font-size: 12px; }
+.map-warning-list .warning-level { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .09em; }
+.map-canvas { position: relative; min-width: 0; background: #dce5e9; }
+.weather-map-page #weather-map { position: absolute; inset: 0; background: #dce5e9; z-index: 0; }
+.map-canvas-toolbar { position: absolute; z-index: 500; top: 20px; left: 20px; right: 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; pointer-events: none; }
+.map-canvas-toolbar > span { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 10px 13px; font-size: 10px; letter-spacing: .12em; font-weight: 800; }
+.map-canvas-toolbar button { pointer-events: auto; color: var(--text); background: var(--panel); border: 1px solid var(--line); padding: 12px; border-radius: 8px; font: inherit; font-size: 12px; cursor: pointer; box-shadow: 0 4px 16px #0001; }
+.map-visual-status { position: absolute; z-index: 500; top: 76px; left: 20px; right: 20px; max-width: 450px; border: 1px solid var(--line); background: var(--panel); padding: 14px; border-radius: 10px; color: var(--text); font-size: 13px; line-height: 1.5; }
+.map-key { position: absolute; z-index: 500; bottom: 30px; left: 20px; display: flex; gap: 13px; flex-wrap: wrap; max-width: calc(100% - 90px); padding: 12px 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 4px 16px #0001; }
+.map-key > span { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text); }
+.weather-map-page .leaflet-control-zoom { margin-bottom: 35px; }
+.weather-map-page .leaflet-popup-content { line-height: 1.55; }.weather-map-page .leaflet-popup-content a { color: var(--cyan); }
+@media (max-width: 1080px) { .map-workspace { grid-template-columns: 330px minmax(0,1fr); }.map-sidebar { padding: 22px; }.map-back { display: none; } }
+@media (max-width: 720px) {
+  .map-workspace { height: auto; display: flex; flex-direction: column; padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
+  .map-sidebar { overflow: visible; border: 0; padding: 22px 18px; }
+  .map-intro h1 { font-size: 30px; }.map-intro > p { margin-bottom: 0; }
+  .map-canvas { order: -1; height: 46dvh; min-height: 280px; border-bottom: 1px solid var(--line); }
+  .map-canvas-toolbar { top: 12px; left: 12px; right: 12px; }.map-canvas-toolbar > span { font-size: 9px; }
+  .map-key { left: 12px; bottom: 26px; padding: 9px 11px; gap: 9px; }
+  .map-key > span { font-size: 10px; }.map-search { margin-top: 18px; }
+  .map-visual-status { left: 12px; right: 12px; top: 62px; }
+}

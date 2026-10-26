@@ -10,7 +10,8 @@
   <script src="/assets/js/shell.js" defer></script>
   <script src="/assets/js/home.js" defer></script>
 </head>
-<body>
+<body class="weather-home-page">
+  <a class="skip-link" href="#main-content">Ir para o conteúdo</a>
   <header class="topbar">
     <a class="brand" href="/inicio.html"><span class="brand-mark">&#9889;</span> Prev<span>Clima</span></a>
     <nav class="desktop-nav" data-role-navigation aria-label="Navegação principal"></nav>
@@ -19,7 +20,8 @@
       <a class="icon-button" href="/perfil.html" aria-label="Perfil">&#9679;</a>
     </div>
   </header>
-  <main class="app-shell">
+  <main class="app-shell" id="main-content">
+    <div class="home-heading"><div><span class="eyebrow">SEU DIA, COM MAIS INFORMAÇÃO</span><h1>Olhe o céu. Planeje o dia.</h1></div><a class="button secondary" id="home-map-link" href="/mapa.html">Explorar mapa ↗</a></div>
     <div class="location-row">
       <div class="location-context"><span class="eyebrow">SUA REGIÃO AGORA</span><button id="open-location" class="location-button" type="button"><span aria-hidden="true">&#8982;</span> <span id="location-name">Mongaguá, SP</span> <span class="location-chevron" aria-hidden="true">&#8964;</span></button></div>
       <span id="auth-state" class="muted" data-role-identity>Visitante</span>
@@ -27,12 +29,13 @@
     <div class="home-layout">
     <div class="weather-column">
     <section class="weather-hero" aria-live="polite">
-      <div class="hero-kicker"><span class="eyebrow">PANORAMA DO TEMPO</span><span class="hero-live-dot" aria-hidden="true"></span></div>
+      <div class="hero-kicker"><span class="eyebrow">PANORAMA DO TEMPO</span><span id="forecast-status" class="forecast-status">Consultando</span></div>
       <div class="weather-icon" aria-hidden="true">&#9729;&#65039;</div>
       <div class="temperature"><span id="temperature">--</span><small>&deg;C</small></div>
-      <h1 id="condition" class="condition">Carregando previsão...</h1>
+      <h2 id="condition" class="condition">Carregando previsão...</h2>
       <p class="muted">Máx. <span id="max-temperature">--</span>&deg; | Mín. <span id="min-temperature">--</span>&deg;</p>
       <p id="updated-at" class="updated-at"></p>
+      <a id="data-source" class="data-source" target="_blank" rel="noopener noreferrer"></a>
     </section>
     <section class="weather-grid" aria-label="Condições atuais">
       <div class="metric"><small>Umidade</small><strong id="humidity">--%</strong></div>
@@ -40,17 +43,18 @@
       <div class="metric"><small>Chance de chuva</small><strong id="rain">--%</strong></div>
     </section>
     </div>
-    <section id="warning-panel" class="warning-panel">
-      <span class="eyebrow">MONITORAMENTO DA REGIÃO</span>
+    <section id="warning-panel" class="warning-panel" data-severity="UNKNOWN" aria-live="polite">
+      <span class="eyebrow">AVISOS METEOROLÓGICOS</span>
       <div class="risk-icon" aria-hidden="true">!</div>
       <span id="demo-chip" class="demo-chip" hidden>Dados de demonstração</span>
       <h2 id="warning-title">Nenhum alerta carregado</h2>
-      <p id="warning-message" class="muted">Aguarde a consulta ao banco de dados.</p>
+      <p id="warning-message" class="muted">Consultando avisos disponíveis para sua região.</p>
       <p id="warning-source" class="data-source"></p>
-      <a id="data-source" class="data-source" target="_blank" rel="noopener noreferrer"></a>
+      <p id="warning-feed" class="feed-summary"></p>
       <a class="button secondary" href="/alertas.html">Ver avisos</a>
     </section>
     </div>
+    <section class="home-shortcuts" aria-label="Explore o PrevClima"><a href="/mapa.html"><span class="shortcut-index">01 / MAPA</span><strong>Veja o tempo na sua região ↗</strong><span>Previsões pontuais e áreas de avisos.</span></a><a href="/estacoes.html"><span class="shortcut-index">02 / OBSERVAÇÕES</span><strong>Consulte as estações INMET ↗</strong><span>Medições registradas, com data e origem.</span></a><a href="/informacoes.html"><span class="shortcut-index">03 / PREVENÇÃO</span><strong>Saiba como se proteger ↗</strong><span>Orientações para eventos meteorológicos.</span></a></section>
   </main>
   <nav class="bottom-nav" aria-label="Navegação principal">
     <a class="active" href="/inicio.html" aria-current="page">&#8962;<span>Início</span></a>
@@ -59,7 +63,7 @@
     <a href="/mapa.html">&#9678;<span>Mapa</span></a>
     <a href="/perfil.html">&#9679;<span>Perfil</span></a>
   </nav>
-  <div id="location-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="location-title">
+  <dialog id="location-modal" class="modal" aria-labelledby="location-title">
     <form id="location-form" class="modal-card">
       <h2 id="location-title">Alterar localização</h2>
       <div class="form-row">
@@ -72,6 +76,6 @@
         <button class="button" type="submit">Confirmar</button>
       </div>
     </form>
-  </div>
+  </dialog>
 </body>
 </html>

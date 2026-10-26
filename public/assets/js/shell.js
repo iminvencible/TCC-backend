@@ -41,6 +41,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (error.status !== 401) navigation.dataset.error = "true";
   }
 
+  PrevClima.applyTheme(user);
+
   const links = [
     ["/inicio.html", "Início"],
     ["/alertas.html", "Alertas"],

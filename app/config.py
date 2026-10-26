@@ -62,7 +62,11 @@ class Settings(BaseSettings):
         if self.app_env.lower() != "production":
             return
         if (
-            self.jwt_secret == "development-secret-change-before-production"
+            self.jwt_secret
+            in {
+                "development-secret-change-before-production",
+                "replace-with-at-least-32-random-characters",
+            }
             or len(self.jwt_secret) < 32
         ):
             raise RuntimeError("Defina JWT_SECRET unico com pelo menos 32 caracteres")

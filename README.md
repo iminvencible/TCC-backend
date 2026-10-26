@@ -60,6 +60,26 @@ Endereços com a porta escolhida:
 - Documentação da API: `http://127.0.0.1:PORTA/docs`
 - Estado da aplicação: `http://127.0.0.1:PORTA/api/health`
 
+## Iniciar com dados reais
+
+O `.env.example` agora usa `SEED_DEMO_DATA=false`. Se você já tem um `.env`, altere
+essa variável nele e recrie os serviços com `docker compose up -d --build`.
+Previsões e avisos de demonstração existentes deixam de aparecer nas consultas
+públicas; o histórico e as contas não são apagados. Contas demo antigas continuam
+existindo: desative-as pelo painel antes de usar a instalação fora do ambiente local.
+
+Em um banco novo, crie o primeiro administrador sem dados fictícios:
+
+```bash
+docker compose exec api python -m app.create_admin
+```
+
+Informe nome, e-mail e senha no terminal. A senha não aparece na tela. O comando
+recusa e-mails já cadastrados e não promove nem modifica contas existentes. Entre
+pelo acesso profissional e cadastre um meteorologista no painel. Usuários comuns
+podem usar o cadastro público. Sem Docker, após as migrações, execute
+`python -m app.seed` para inicializar as funções e `python -m app.create_admin`.
+
 ## Contas locais de teste
 
 As contas são inseridas somente quando `SEED_DEMO_DATA=true`. Elas também estão no
@@ -104,6 +124,13 @@ pronta e repete a consulta a cada 60 minutos, por padrão:
 
 `https://apiprevmet3.inmet.gov.br/avisos/rss`
 
+O RSS oficial é um índice: cada item aponta para um documento CAP em
+`https://apiprevmet3.inmet.gov.br/avisos/rss/{id}`. O importador segue esses links
+restritos e obtém geometria, validade com fuso horário, instruções e cancelamentos
+do CAP. O resumo HTML do RSS não é tratado como aviso: foi observado um item com
+resumo “Alert” cujo CAP era “Cancel”. Mensagens de teste e de circulação restrita
+continuam excluídas.
+
 A integração valida domínio e HTTPS, limita transferência e tempo de resposta, faz
 importação idempotente e mantém disponíveis os avisos já armazenados quando o INMET
 está indisponível. Os avisos expiram pelo prazo indicado pela fonte; dados salvos não
@@ -134,14 +161,28 @@ python -m app.sync_inmet
 ```
 
 Para verificar o processo automático no Docker: `docker compose logs -f inmet-worker`.
-O RSS pode conter avisos sem polígono CAP. Nesses casos, a página do mapa mostra
+O documento CAP pode conter avisos sem polígono. Nesses casos, a página do mapa mostra
 o aviso em texto, sem gerar uma área fictícia. Se não houver áreas compatíveis e
 vigentes, o mapa não terá polígonos do INMET para mostrar.
-O endereço do RSS consta no portal do INMET, mas a compatibilidade com o formato
-atual dos itens e a presença de polígonos não foram verificadas em uma consulta
-real neste ambiente. Antes de uma apresentação com dados ao vivo, acompanhe
-`docker compose logs inmet-worker` e compare os avisos importados com o portal
-oficial. Não trate ausência de avisos no mapa como ausência de risco.
+A consulta aceita até 100 links CAP, com quatro transferências simultâneas, limite
+por documento e limite total de cinco vezes `INMET_MAX_RESPONSE_BYTES`. Falha em
+qualquer documento preserva o conjunto salvo e registra uma tentativa indisponível;
+nenhum resumo incompleto é publicado. Cancelamentos são processados depois dos
+avisos que podem referenciar.
+
+A tela inicial, o mapa público e o mapa do painel mostram a situação do INMET:
+aguardando, atualizado, atrasado, indisponível ou desativado, com a última consulta
+concluída. O mapa oferece busca pública por cidade/UF, GPS autenticado, lista de
+avisos, camadas independentes e atualização a cada cinco minutos enquanto visível.
+As previsões diárias usam o fuso da localidade (`timezone=auto`).
+
+Verificação em 26/10/2026: consultas reais pelo endpoint `/api/v1/map-data` para
+Mongaguá/SP e Recife/PE; sincronização do RSS e dos CAP com 32 avisos importados com
+polígonos, 42 itens ignorados/cancelamentos e dois avisos vigentes no momento da
+consulta. Esses números são um registro da verificação, não valores fixos da aplicação.
+O INMET também retornou 503 em tentativas anteriores; a integração continua
+sujeita à disponibilidade da fonte. O histórico de estações é uma integração
+separada e ainda depende da configuração e disponibilidade descritas abaixo.
 
 ## Banco de dados
 
@@ -235,6 +276,7 @@ dependências e defina `$env:OPEN_METEO_ENABLED = "true"` e
 ruff format --check app migrations tests
 ruff check app migrations tests
 pytest -q
+node --test tests/*.test.cjs
 find public -name '*.js' -print0 | xargs -0 -n1 node --check
 ```
 

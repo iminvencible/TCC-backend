@@ -301,10 +301,20 @@ class AlertReviewOut(BaseModel):
         return utc_iso(value)
 
 
+class WarningFeedOut(BaseModel):
+    status: Literal["current", "stale", "unavailable", "pending", "disabled"]
+    last_success_at: datetime | None = None
+
+    @field_serializer("last_success_at")
+    def serialize_last_success(self, value: datetime | None) -> str | None:
+        return utc_iso(value) if value else None
+
+
 class HomeOut(BaseModel):
     forecast: ForecastOut | None
     active_alerts: list[AlertOut]
     unread_alert_count: int
+    warning_feed: WarningFeedOut
 
 
 class MapAlertOut(BaseModel):
@@ -365,6 +375,7 @@ class MapForecastPointOut(BaseModel):
 
 
 class MapDataOut(BaseModel):
+    warning_feed: WarningFeedOut
     alerts: list[MapAlertOut]
     forecast_areas: list[MapForecastOut]
     forecast_points: list[MapForecastPointOut] = Field(default_factory=list)

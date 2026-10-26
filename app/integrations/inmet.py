@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import hashlib
+import re
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from email.utils import parsedate_to_datetime
+from threading import Lock
 from urllib.parse import urlparse
 
 import httpx
@@ -199,10 +202,12 @@ def parse_warning_feed(
         if valid_until <= issued_at:
             continue
         instruction = _first_text(entry, "instruction")
-        link = _first_text(entry, "link") or source_url
+        link = _first_text(entry, "web", "link") or source_url
         parsed_link = urlparse(link)
         if (
             parsed_link.scheme != "https"
+            or parsed_link.username
+            or parsed_link.password
             or not parsed_link.hostname
             or not (
                 parsed_link.hostname == "inmet.gov.br"
@@ -252,12 +257,39 @@ class InmetClient:
         self.settings = settings or get_settings()
         self.transport = transport
 
+    def _fetch_document(self, client: httpx.Client, url: str, *, budget=None) -> bytes:
+        if budget:
+            lock, remaining = budget
+            with lock:
+                if remaining[0] <= 0:
+                    raise InmetError("Os documentos CAP excederam o limite total permitido")
+        with client.stream("GET", url) as response:
+            response.raise_for_status()
+            chunks: list[bytes] = []
+            total = 0
+            for chunk in response.iter_bytes():
+                total += len(chunk)
+                if budget:
+                    with lock:
+                        remaining[0] -= len(chunk)
+                        if remaining[0] < 0:
+                            raise InmetError("Os documentos CAP excederam o limite total permitido")
+                if total > self.settings.inmet_max_response_bytes:
+                    raise InmetError("A resposta do INMET excedeu o limite permitido")
+                chunks.append(chunk)
+            return b"".join(chunks)
+
     def fetch_warnings(self) -> list[NormalizedWarning]:
         if not self.settings.inmet_enabled:
             raise InmetError("A integração com o INMET está desabilitada")
-        parsed = urlparse(self.settings.inmet_warning_rss_url)
-        if parsed.scheme != "https" or not (
-            parsed.hostname == "inmet.gov.br" or parsed.hostname.endswith(".inmet.gov.br")
+        url = self.settings.inmet_warning_rss_url
+        parsed = urlparse(url)
+        if (
+            parsed.scheme != "https"
+            or not parsed.hostname
+            or parsed.username
+            or parsed.password
+            or not (parsed.hostname == "inmet.gov.br" or parsed.hostname.endswith(".inmet.gov.br"))
         ):
             raise InmetError("A URL configurada para o INMET não é permitida")
         try:
@@ -267,19 +299,65 @@ class InmetClient:
                 transport=self.transport,
                 headers={"User-Agent": self.settings.inmet_user_agent},
             ) as client:
-                with client.stream("GET", self.settings.inmet_warning_rss_url) as response:
-                    response.raise_for_status()
-                    chunks: list[bytes] = []
-                    total = 0
-                    for chunk in response.iter_bytes():
-                        total += len(chunk)
-                        if total > self.settings.inmet_max_response_bytes:
-                            raise InmetError("A resposta do INMET excedeu o limite permitido")
-                        chunks.append(chunk)
-                    content = b"".join(chunks)
-        except httpx.HTTPError as error:
-            raise InmetError("Não foi possível consultar o INMET") from error
-        return parse_warning_feed(
-            content,
-            source_url=self.settings.inmet_warning_rss_url,
-        )
+                content = self._fetch_document(client, url)
+                try:
+                    root = ElementTree.fromstring(content)
+                except (ElementTree.ParseError, DefusedXmlException) as error:
+                    raise InmetError("O INMET retornou XML inválido") from error
+                entries = _feed_entries(root)
+                linked, embedded = [], []
+                for entry in entries:
+                    # The official RSS is an index: its HTML descriptions omit
+                    # geometry and can even say Alert for a cancelled CAP message.
+                    # Follow only the exact official CAP endpoint, never HTML links.
+                    link = _first_text(entry, "link") or ""
+                    is_index = (
+                        _local_name(entry.tag) == "item"
+                        and not _first_text(entry, "expires")
+                        and not any(_local_name(n.tag) == "alert" for n in entry.iter())
+                    )
+                    if is_index and link:
+                        target = urlparse(link)
+                        if (
+                            target.scheme != "https"
+                            or target.hostname != "apiprevmet3.inmet.gov.br"
+                            or target.port not in {None, 443}
+                            or target.username
+                            or target.password
+                            or target.query
+                            or target.fragment
+                            or not re.fullmatch(r"/avisos/rss/[0-9]+", target.path)
+                        ):
+                            raise InmetError("Link de detalhe CAP do INMET não permitido")
+                        linked.append(link)
+                    else:
+                        embedded.append(entry)
+                if not linked:
+                    return parse_warning_feed(content, source_url=url)
+                linked = list(dict.fromkeys(linked))
+                if len(linked) > 100:
+                    raise InmetError("O índice INMET excedeu o limite de 100 documentos CAP")
+                warnings = []
+                for entry in embedded:
+                    warnings.extend(parse_warning_feed(ElementTree.tostring(entry), source_url=url))
+                # Bounded concurrency and transfer. A partial fetch never reports
+                # successful synchronization or replaces the stored warning set.
+                budget = (Lock(), [self.settings.inmet_max_response_bytes * 5 - len(content)])
+                with ThreadPoolExecutor(max_workers=4) as executor:
+                    documents = executor.map(
+                        lambda link: self._fetch_document(client, link, budget=budget), linked
+                    )
+                    for link, document in zip(linked, documents, strict=True):
+                        try:
+                            detail = ElementTree.fromstring(document)
+                        except (ElementTree.ParseError, DefusedXmlException) as error:
+                            raise InmetError("Documento CAP inválido") from error
+                        if _local_name(detail.tag) != "alert":
+                            raise InmetError("O detalhe do INMET não contém um alerta CAP")
+                        warnings.extend(parse_warning_feed(document, source_url=link))
+                return sorted(
+                    warnings,
+                    key=lambda warning: (warning.message_type == "CANCEL", warning.issued_at),
+                )
+        except (httpx.HTTPError, ValueError) as error:
+            raise InmetError("Não foi possível consultar os documentos do INMET") from error

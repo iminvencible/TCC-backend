@@ -7,7 +7,9 @@ from sqlalchemy import and_, desc, select, update
 from sqlalchemy.exc import IntegrityError
 
 from app.audit import record_audit
+from app.config import get_settings
 from app.dependencies import CurrentUser, DbSession, optional_current_user, require_roles
+from app.inmet_sync import warning_feed_status
 from app.models import AlertRead, AlertReview, Forecast, User, WeatherAlert
 from app.open_meteo_sync import get_open_meteo_or_fallback
 from app.schemas import (
@@ -57,6 +59,18 @@ def forecast_out(forecast: Forecast, *, is_stale: bool = False) -> ForecastOut:
     return ForecastOut.model_validate(forecast).model_copy(update={"is_stale": is_stale})
 
 
+def demo_alert_filter():
+    return (
+        True
+        if get_settings().seed_demo_data
+        else and_(WeatherAlert.is_demo.is_(False), WeatherAlert.origin != "DEMO")
+    )
+
+
+def demo_forecast_filter():
+    return True if get_settings().seed_demo_data else Forecast.source_key.not_like("DEMO-%")
+
+
 def active_alerts(db: DbSession) -> list[WeatherAlert]:
     return list(
         db.scalars(
@@ -66,6 +80,7 @@ def active_alerts(db: DbSession) -> list[WeatherAlert]:
                     WeatherAlert.issued_at <= now_utc(),
                     WeatherAlert.valid_until > now_utc(),
                     WeatherAlert.validation_status == "ACTIVE",
+                    demo_alert_filter(),
                 )
             )
             .order_by(desc(WeatherAlert.issued_at))
@@ -166,7 +181,7 @@ def list_alerts(
             status_code=422, detail="Latitude e longitude devem ser informadas juntas"
         )
     query = select(WeatherAlert)
-    query = query.where(WeatherAlert.validation_status == "ACTIVE")
+    query = query.where(WeatherAlert.validation_status == "ACTIVE", demo_alert_filter())
     if active:
         query = query.where(
             WeatherAlert.issued_at <= now_utc(), WeatherAlert.valid_until > now_utc()
@@ -350,8 +365,8 @@ def current_forecast(
 def home(
     db: DbSession,
     user: Annotated[User | None, Depends(optional_current_user)],
-    city: str = Query(default="Mongagua", min_length=2, max_length=100),
-    state: str = Query(default="SP", min_length=2, max_length=2),
+    city: str | None = Query(default=None, min_length=2, max_length=100),
+    state: str | None = Query(default=None, min_length=2, max_length=2),
     latitude: float | None = Query(default=None, ge=-90, le=90),
     longitude: float | None = Query(default=None, ge=-180, le=180),
 ):
@@ -359,9 +374,13 @@ def home(
         raise HTTPException(
             status_code=422, detail="Latitude e longitude devem ser informadas juntas"
         )
-    if user and user.city and user.state:
-        city, state = user.city, user.state
-    if user and latitude is None and user.latitude is not None and user.longitude is not None:
+    if (city is None) != (state is None):
+        raise HTTPException(status_code=422, detail="Cidade e UF devem ser informadas juntas")
+    explicit_location = city is not None or latitude is not None
+    if city is None:
+        city = user.city if user and user.city else "Mongagua"
+        state = user.state if user and user.state else "SP"
+    if not explicit_location and user and user.latitude is not None and user.longitude is not None:
         latitude, longitude = float(user.latitude), float(user.longitude)
     forecast, is_stale = get_open_meteo_or_fallback(
         db,
@@ -377,6 +396,7 @@ def home(
                 Forecast.issued_at <= now_utc(),
                 Forecast.valid_until > now_utc(),
                 Forecast.polygon.is_not(None),
+                demo_forecast_filter(),
             )
             .order_by(desc(Forecast.issued_at))
         )
@@ -388,10 +408,21 @@ def home(
             ),
             None,
         )
+    if (
+        latitude is None
+        and forecast
+        and forecast.latitude is not None
+        and forecast.longitude is not None
+    ):
+        latitude, longitude = float(forecast.latitude), float(forecast.longitude)
     alerts = alerts_for_location(active_alerts(db), latitude, longitude)
+    # Highlight the most severe current warning, rather than the newest mild one.
+    ranks = {"CRITICAL": 4, "HIGH": 3, "MODERATE": 2, "LOW": 1}
+    alerts.sort(key=lambda alert: ranks.get(alert.severity, 0), reverse=True)
     read_ids = user_read_ids(db, user, [alert.id for alert in alerts])
     rendered = [alert_out(alert, read_ids) for alert in alerts]
     return HomeOut(
+        warning_feed=warning_feed_status(db),
         forecast=forecast_out(forecast, is_stale=is_stale) if forecast else None,
         active_alerts=rendered,
         unread_alert_count=(
@@ -486,6 +517,7 @@ def map_data(
             Forecast.issued_at <= now_utc(),
             Forecast.valid_until > now_utc(),
             Forecast.polygon.is_not(None),
+            demo_forecast_filter(),
         )
         .order_by(desc(Forecast.issued_at))
     )
@@ -503,6 +535,7 @@ def map_data(
         if forecast.polygon
     ]
     return MapDataOut(
+        warning_feed=warning_feed_status(db),
         alerts=alerts,
         forecast_areas=forecast_areas,
         forecast_points=forecast_points,

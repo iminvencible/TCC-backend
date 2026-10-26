@@ -3,6 +3,15 @@ import { api, esc, empty } from "./ui.js";
 export async function drawMap(container) {
   const data = await api("/map-data");
   if (!container.isConnected) return null;
+  const status = document.createElement("p");
+  status.className = "hint";
+  status.textContent = PrevClima.feedStatus(data.warning_feed);
+  container.after(status);
+  const search = document.createElement("a");
+  search.className = "btn";
+  search.href = "/mapa.html";
+  search.textContent = "Buscar cidade e ver lista completa de avisos ↗";
+  status.after(search);
   if (!window.L) {
     container.innerHTML = empty(
       "Mapa indisponível. Consulte a lista de alertas e as estações.",
@@ -13,6 +22,8 @@ export async function drawMap(container) {
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 18,
     attribution: "© OpenStreetMap contributors",
+  }).on("tileerror", () => {
+    status.textContent = "Mapa-base indisponível. Use a lista de avisos. " + PrevClima.feedStatus(data.warning_feed);
   }).addTo(map);
   const alerts = L.layerGroup().addTo(map),
     forecasts = L.layerGroup().addTo(map);
@@ -55,5 +66,8 @@ export async function drawMap(container) {
       "Previsões pontuais": forecasts,
     })
     .addTo(map);
+  const point = data.forecast_points?.[0];
+  if (point) map.setView([Number(point.latitude), Number(point.longitude)], 9);
+  else if (alerts.getLayers().length) map.fitBounds(L.featureGroup(alerts.getLayers()).getBounds().pad(.15));
   return map;
 }
