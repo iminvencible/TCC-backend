@@ -149,7 +149,15 @@ def parse_forecast_payload(
         raise OpenMeteoError("O Open-Meteo retornou uma previsão incompleta")
 
     timestamp = _integer(current.get("time"), "o horário atual")
-    issued_at = datetime.fromtimestamp(timestamp, tz=UTC)
+    try:
+        issued_at = datetime.fromtimestamp(timestamp, tz=UTC)
+    except (ValueError, OverflowError, OSError) as error:
+        raise OpenMeteoError("O Open-Meteo retornou um horário inválido") from error
+    reference_time = now or datetime.now(UTC)
+    if issued_at > reference_time + timedelta(minutes=5) or issued_at < reference_time - timedelta(
+        hours=2
+    ):
+        raise OpenMeteoError("O Open-Meteo retornou condições fora da janela atual")
     temperature = _number(current.get("temperature_2m"), "a temperatura")
     humidity = _integer(current.get("relative_humidity_2m"), "a umidade")
     wind = _number(current.get("wind_speed_10m"), "a velocidade do vento")
@@ -297,7 +305,7 @@ class OpenMeteoClient:
                 ),
                 "temperature_unit": "celsius",
                 "wind_speed_unit": "kmh",
-                "timezone": "UTC",
+                "timezone": "auto",
                 "timeformat": "unixtime",
                 "forecast_days": 2,
             },

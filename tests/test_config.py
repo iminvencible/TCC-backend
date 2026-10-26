@@ -32,3 +32,14 @@ def test_production_accepts_explicit_safe_settings():
         cors_origins=["https://prevclima.example"],
     )
     settings.validate_production()
+
+
+def test_production_rejects_example_secret():
+    settings = Settings(
+        app_env="production",
+        database_url="mysql+pymysql://user:pass@db/prevclima",
+        cookie_secure=True,
+        jwt_secret="replace-with-at-least-32-random-characters",
+    )
+    with pytest.raises(RuntimeError, match="JWT_SECRET"):
+        settings.validate_production()

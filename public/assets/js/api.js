@@ -111,5 +111,17 @@
     return formatter.format(Math.round(hours / 24), "day");
   }
 
-  window.PrevClima = { request, setBusy, applyTheme, roleName, severityName, eventName, relativeTime };
+  function feedStatus(feed) {
+    const messages = {
+      current: "Sincronização concluída. Avisos vigentes da última consulta.",
+      stale: "Sincronização atrasada. Exibindo apenas avisos salvos ainda vigentes.",
+      unavailable: "INMET indisponível na última tentativa. Os avisos salvos continuam até sua validade.",
+      pending: "Aguardando a primeira sincronização do INMET.",
+      disabled: "Sincronização do INMET desativada nesta instalação.",
+    };
+    const message = messages[feed?.status] || "Estado da sincronização não disponível.";
+    return message + (feed?.last_success_at ? ` Última consulta concluída: ${new Date(feed.last_success_at).toLocaleString("pt-BR")}.` : "");
+  }
+
+  window.PrevClima = { feedStatus, request, setBusy, applyTheme, roleName, severityName, eventName, relativeTime };
 })();

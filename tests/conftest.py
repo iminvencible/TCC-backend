@@ -13,7 +13,10 @@ from app.models import EducationalContent, Forecast, Role, WeatherAlert
 
 
 @pytest.fixture()
-def db():
+def db(monkeypatch):
+    from app.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "seed_demo_data", True)
     engine = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False},

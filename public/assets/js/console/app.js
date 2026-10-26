@@ -77,6 +77,8 @@ function activityLabel(value) {
       METEOROLOGIST_CREATED: "Meteorologista credenciado",
       USER_ROLE_CHANGED: "Permissão de conta atualizada",
       USER_DEACTIVATED: "Conta desativada",
+      INMET_WARNINGS_FAILED: "Consulta ao INMET indisponível",
+      ADMIN_BOOTSTRAPPED: "Administrador inicial criado",
       INMET_WARNINGS_SYNCED: "Avisos INMET sincronizados",
     }[value] || "Registro de operação"
   );

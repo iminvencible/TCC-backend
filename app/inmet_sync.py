@@ -1,11 +1,12 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.audit import record_audit
+from app.config import get_settings
 from app.integrations.inmet import InmetClient, InmetError
-from app.models import User, WeatherAlert
+from app.models import AuditEvent, User, WeatherAlert
 
 
 def cached_active_inmet_count(db: Session) -> int:
@@ -29,7 +30,19 @@ def sync_inmet_warnings(
     actor: User | None,
     client: InmetClient | None = None,
 ) -> tuple[int, int]:
-    warnings = (client or InmetClient()).fetch_warnings()
+    try:
+        warnings = (client or InmetClient()).fetch_warnings()
+    except InmetError:
+        db.rollback()
+        record_audit(
+            db,
+            actor=actor,
+            action="INMET_WARNINGS_FAILED",
+            target_type="integration",
+            target_id="INMET",
+        )
+        db.commit()
+        raise
     imported = 0
     skipped = 0
     for warning in warnings:
@@ -98,3 +111,33 @@ def sync_inmet_warnings(
 
 
 __all__ = ["InmetError", "cached_active_inmet_count", "sync_inmet_warnings"]
+
+
+def warning_feed_status(db: Session) -> dict:
+    """Report persisted worker health without fetching upstream on public requests."""
+    settings = get_settings()
+    base = select(AuditEvent).where(
+        AuditEvent.target_type == "integration",
+        AuditEvent.target_id == "INMET",
+        AuditEvent.action.in_(["INMET_WARNINGS_SYNCED", "INMET_WARNINGS_FAILED"]),
+    )
+    latest = db.scalar(base.order_by(AuditEvent.created_at.desc(), AuditEvent.id.desc()).limit(1))
+    success = db.scalar(
+        base.where(AuditEvent.action == "INMET_WARNINGS_SYNCED")
+        .order_by(AuditEvent.created_at.desc(), AuditEvent.id.desc())
+        .limit(1)
+    )
+    last_success = success.created_at.replace(tzinfo=UTC) if success else None
+    if not settings.inmet_enabled:
+        status = "disabled"
+    elif not latest:
+        status = "pending"
+    elif latest.action == "INMET_WARNINGS_FAILED":
+        status = "unavailable"
+    elif last_success < datetime.now(UTC) - timedelta(
+        minutes=settings.inmet_sync_interval_minutes * 2
+    ):
+        status = "stale"
+    else:
+        status = "current"
+    return {"status": status, "last_success_at": last_success}

@@ -39,10 +39,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     const alerts = home.active_alerts || [];
     const risk = document.querySelector("#mobile-risk-card");
     const highestSeverity = alerts.some((alert) => ["CRITICAL", "HIGH"].includes(alert.severity));
-    risk.dataset.risk = alerts.length ? (highestSeverity ? "high" : "moderate") : "clear";
-    risk.querySelector(".mobile-risk-icon").textContent = alerts.length ? "!" : "✓";
-    document.querySelector("#mobile-risk-title").textContent = alerts.length ? `${alerts.length} aviso(s) ativo(s)` : "Sem avisos ativos";
-    document.querySelector("#mobile-risk-copy").textContent = alerts.length ? (alerts.find((alert) => ["CRITICAL", "HIGH"].includes(alert.severity)) || alerts[0]).title : "Nenhum aviso ativo nas áreas acompanhadas.";
+    risk.dataset.risk = alerts.length ? (highestSeverity ? "high" : "moderate") : "unknown";
+    risk.querySelector(".mobile-risk-icon").textContent = alerts.length ? "!" : "i";
+    document.querySelector("#mobile-risk-title").textContent = alerts.length ? `${alerts.length} aviso(s) ativo(s)` : "Nenhum aviso disponível";
+    document.querySelector("#mobile-risk-copy").textContent = alerts.length ? (alerts.find((alert) => ["CRITICAL", "HIGH"].includes(alert.severity)) || alerts[0]).title : PrevClima.feedStatus(home.warning_feed);
     const list = document.querySelector("#mobile-alerts");
     list.replaceChildren();
     if (!alerts.length) {

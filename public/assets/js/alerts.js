@@ -7,10 +7,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     const user = await PrevClima.request("/users/me");
     PrevClima.applyTheme(user);
     location.textContent = user.city && user.state
-      ? `Localização confirmada: ${user.city}, ${user.state}`
+      ? `Cidade do perfil: ${user.city}, ${user.state}${user.latitude == null || user.longitude == null ? " · Avisos de todas as áreas" : ""}`
       : "Alertas ativos para todas as áreas";
   } catch (error) {
-    signedIn = error.status !== 401;
+    signedIn = false;
     location.textContent = "Alertas ativos para todas as áreas";
   }
 
@@ -93,7 +93,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const alerts = await PrevClima.request("/alerts?active=true");
     count.textContent = `${alerts.length} ativo${alerts.length === 1 ? "" : "s"}`;
     list.replaceChildren();
-    if (!alerts.length) list.append(paragraph("Nenhum alerta ativo no momento.", "empty"));
+    if (!alerts.length) list.append(paragraph("Nenhum aviso disponível. Confira também a fonte oficial do INMET; a ausência de avisos não confirma ausência de risco.", "empty"));
     else alerts.forEach((alert) => list.append(render(alert)));
   } catch (error) {
     count.textContent = "Indisponível";

@@ -21,6 +21,7 @@ jobs:
       - run: ruff format --check app migrations tests
       - run: ruff check app migrations tests
       - run: pytest -q
+      - run: node --test tests/*.test.cjs
       - name: Check browser JavaScript
         run: find public -name '*.js' -print0 | xargs -0 -n1 node --check
 

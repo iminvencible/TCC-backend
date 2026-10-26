@@ -4,6 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 from sqlalchemy import func, select
 
+from app.config import get_settings
 from app.dependencies import DbSession, require_roles
 from app.models import AuditEvent, User, WeatherAlert, WeatherReport
 from app.schemas import utc_iso
@@ -21,6 +22,8 @@ def dashboard(
         WeatherAlert.issued_at <= now,
         WeatherAlert.valid_until > now,
         WeatherAlert.validation_status == "ACTIVE",
+        True if get_settings().seed_demo_data else WeatherAlert.is_demo.is_(False),
+        True if get_settings().seed_demo_data else WeatherAlert.origin != "DEMO",
     )
     events = db.scalars(select(AuditEvent).order_by(AuditEvent.created_at.desc()).limit(8))
     latest = db.scalar(select(func.max(StationObservation.observed_at)))

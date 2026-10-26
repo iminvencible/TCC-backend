@@ -3,10 +3,16 @@ document.addEventListener("DOMContentLoaded", () => {
   const form = document.querySelector("#location-form");
   const message = document.querySelector("#location-message");
   let currentUser = null;
+  let requestId = 0;
 
   function showForecast(data) {
     const forecast = data.forecast;
+    document.querySelector("#forecast-status").textContent = forecast ? (forecast.is_stale ? "Dado salvo" : "Previsão atualizada") : "Indisponível";
     if (forecast) {
+      document.querySelector("#location-name").textContent = `${forecast.city}, ${forecast.state}`;
+      document.querySelector("#home-map-link").href = `/mapa.html?${new URLSearchParams({ city: forecast.city, state: forecast.state })}`;
+      const condition = forecast.condition.toLowerCase();
+      document.querySelector(".weather-icon").textContent = /tempestade|granizo/.test(condition) ? "⛈" : /chuva|garoa/.test(condition) ? "🌧" : /limpo/.test(condition) ? "☀" : "☁";
       document.querySelector("#temperature").textContent = Math.round(Number(forecast.temperature_c));
       document.querySelector("#condition").textContent = forecast.condition;
       document.querySelector("#max-temperature").textContent = Math.round(Number(forecast.maximum_c));
@@ -29,12 +35,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const first = data.active_alerts[0];
+    document.querySelector("#warning-panel").dataset.severity = first?.severity || "UNKNOWN";
+    document.querySelector(".risk-icon").textContent = first ? "!" : "i";
+    document.querySelector("#warning-feed").textContent = PrevClima.feedStatus(data.warning_feed);
     document.querySelector("#warning-title").textContent = first
       ? `${first.is_demo ? "DEMO - " : ""}${first.title}`
-      : "Sem alertas ativos";
+      : "Nenhum aviso disponível";
     document.querySelector("#warning-message").textContent = first
       ? first.message
-      : "Nenhum alerta meteorológico está ativo no momento.";
+      : "A ausência de avisos disponíveis não confirma ausência de risco. Confira também os avisos oficiais do INMET.";
     document.querySelector("#warning-source").textContent = first
       ? `Origem: ${first.source_name}`
       : "";
@@ -43,6 +52,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function load(city, state) {
+    const id = ++requestId;
+    document.querySelector("#forecast-status").textContent = "Consultando";
     const params = new URLSearchParams();
     if (city && state) {
       params.set("city", city);
@@ -50,9 +61,17 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     const suffix = params.size ? `?${params}` : "";
     try {
-      showForecast(await PrevClima.request(`/home${suffix}`));
+      const data = await PrevClima.request(`/home${suffix}`);
+      if (id !== requestId) return false;
+      showForecast(data);
+      return true;
     } catch (error) {
+      if (id !== requestId) return false;
+      showForecast({ forecast: null, active_alerts: [], unread_alert_count: 0 });
       document.querySelector("#condition").textContent = error.message;
+      document.querySelector("#warning-title").textContent = "Avisos indisponíveis";
+      document.querySelector("#warning-message").textContent = "Não foi possível consultar os dados. Tente novamente em instantes.";
+      return false;
     }
   }
 
@@ -69,14 +88,22 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (error) {
       if (error.status !== 401) document.querySelector("#auth-state").textContent = "Indisponível";
     }
-    await load(currentUser && currentUser.city, currentUser && currentUser.state);
+    await load();
   }
 
-  document.querySelector("#open-location").addEventListener("click", () => modal.classList.add("open"));
-  document.querySelector("#close-location").addEventListener("click", () => modal.classList.remove("open"));
+  function closeLocation() { modal.close(); modal.classList.remove("open"); }
+  document.querySelector("#open-location").addEventListener("click", () => {
+    modal.classList.add("open");
+    modal.showModal();
+    form.city.focus();
+  });
+  modal.addEventListener("close", () => modal.classList.remove("open"));
+  document.querySelector("#close-location").addEventListener("click", closeLocation);
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     message.textContent = "";
+    const submit = form.querySelector('button[type="submit"]');
+    PrevClima.setBusy(submit, true);
     const city = form.city.value.trim();
     const state = form.state.value.trim().toUpperCase();
     try {
@@ -87,10 +114,12 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       }
       document.querySelector("#location-name").textContent = `${city}, ${state}`;
-      await load(city, state);
-      modal.classList.remove("open");
+      if (await load(city, state)) closeLocation();
+      else message.textContent = "Não foi possível consultar esta localidade. Tente novamente.";
     } catch (error) {
       message.textContent = error.message;
+    } finally {
+      PrevClima.setBusy(submit, false);
     }
   });
 

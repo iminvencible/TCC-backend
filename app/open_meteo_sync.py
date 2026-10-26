@@ -148,6 +148,7 @@ def get_open_meteo_or_fallback(
             Forecast.source_key == source_key,
             Forecast.source_name == OPEN_METEO_SOURCE_NAME,
             Forecast.issued_at >= stale_cutoff,
+            Forecast.issued_at <= now,
         )
         .order_by(desc(Forecast.issued_at))
     )
@@ -158,6 +159,7 @@ def get_open_meteo_or_fallback(
         local = db.scalar(
             select(Forecast)
             .where(
+                True if settings.seed_demo_data else Forecast.source_key.not_like("DEMO-%"),
                 func.lower(Forecast.city) == city.strip().lower(),
                 Forecast.state == state.strip().upper(),
                 Forecast.issued_at <= now,
