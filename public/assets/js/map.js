@@ -100,7 +100,19 @@ document.addEventListener("DOMContentLoaded", () => {
       list.append(item);
     }
   }
+  function renderSevereForecasts(data) {
+    const host = $("#map-severe-list");
+    if (!host) return;
+    host.replaceChildren();
+    for (const area of data.severe_forecast_areas || []) {
+      const article = element("article", "", "map-warning");
+      article.append(element("h3", area.area_name), element("p", `${PrevClima.severityName(area.severity)} · ${area.description}`), element("p", `Até ${new Date(area.valid_until).toLocaleString("pt-BR")}`));
+      host.append(article);
+    }
+    if (!host.children.length) host.append(element("p", "Nenhuma previsão de tempo severo vigente."));
+  }
   function draw(data, recenter) {
+    renderSevereForecasts(data);
     if (!map) return;
     forecastLayer.clearLayers();
     alertLayer.clearLayers();
@@ -108,6 +120,10 @@ document.addEventListener("DOMContentLoaded", () => {
     for (const point of data.forecast_points || []) {
       L.circleMarker([Number(point.latitude), Number(point.longitude)], { radius: 10, color: "#fff", fillColor: "#258cce", fillOpacity: 1, weight: 3 })
         .bindPopup(popup(`${point.city}, ${point.state}`, `${point.condition} · ${Math.round(Number(point.temperature_c))} °C${point.is_stale ? " · Último dado salvo" : ""}`, point.source_name, point.source_url, point.valid_until)).addTo(forecastLayer);
+    }
+    for (const area of data.severe_forecast_areas || []) {
+      L.geoJSON(area.polygon, { style: { color: "#9b7af5", fillOpacity: 0.18 } })
+        .bindPopup(popup(area.area_name, `${PrevClima.severityName(area.severity)} · ${area.description}`, "PrevClima · Previsão de tempo severo", null, area.valid_until)).addTo(forecastLayer);
     }
     for (const area of data.forecast_areas || []) {
       L.geoJSON(area.polygon, { style: { color: "#258cce", fillOpacity: .1, dashArray: "5 6" } })
@@ -138,6 +154,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Never keep an expired warning on screen just because a refresh failed.
     if (!lastData) return;
     lastData.alerts = (lastData.alerts || []).filter((a) => Date.parse(a.valid_until) > Date.now());
+    lastData.severe_forecast_areas = (lastData.severe_forecast_areas || []).filter((f) => Date.parse(f.valid_until) > Date.now());
     lastData.forecast_areas = (lastData.forecast_areas || []).filter((f) => Date.parse(f.valid_until) > Date.now());
     lastData.forecast_points = (lastData.forecast_points || []).filter((p) => Date.now() - Date.parse(p.issued_at) <= 86400000).map((p) => ({ ...p, is_stale: true }));
     draw(lastData, false);

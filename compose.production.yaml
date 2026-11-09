@@ -1,0 +1,59 @@
+name: prevclima-public
+x-app: &app
+  image: prevclima-api:production
+  restart: unless-stopped
+  env_file: .env.production
+  environment:
+    APP_ENV: production
+    DATABASE_URL: mysql+pymysql://prevclima:${MYSQL_PASSWORD:?Run production setup first}@db:3306/prevclima?charset=utf8mb4
+    COOKIE_SECURE: 'true'
+    SEED_DEMO_DATA: 'false'
+  logging:
+    driver: json-file
+    options:
+      max-size: '10m'
+      max-file: '3'
+services:
+  db:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: prevclima
+      MYSQL_USER: prevclima
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Run production setup first}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Run production setup first}
+    volumes:
+      - mysql_public_data:/var/lib/mysql
+    healthcheck:
+      test: ['CMD-SHELL', 'MYSQL_PWD="$$MYSQL_ROOT_PASSWORD" mysqladmin ping -h localhost -uroot --silent']
+      interval: 5s
+      timeout: 5s
+      retries: 30
+  api:
+    <<: *app
+    build: .
+    ports:
+      - '127.0.0.1:${PREVCLIMA_PORT:-18080}:8000'
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'python', '-c', "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/ready', timeout=3).close()"]
+      interval: 5s
+      timeout: 4s
+      retries: 30
+      start_period: 30s
+  inmet-worker:
+    <<: *app
+    command: ['python', '-m', 'app.sync_inmet', '--loop']
+    depends_on:
+      api:
+        condition: service_healthy
+  station-worker:
+    <<: *app
+    command: ['python', '-m', 'app.sync_stations', '--loop']
+    depends_on:
+      api:
+        condition: service_healthy
+volumes:
+  mysql_public_data:

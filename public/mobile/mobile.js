@@ -60,7 +60,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     message.textContent = "";
     PrevClima.setBusy(button, true);
     try {
-      const result = await PrevClima.request("/auth/register", {
+      await PrevClima.request("/auth/register", {
         method: "POST",
         body: JSON.stringify({
           name: registerForm.elements["name"].value.trim(),
@@ -70,15 +70,9 @@ document.addEventListener("DOMContentLoaded", async () => {
           state: null,
         }),
       });
-      if (result.user.role !== "USER") throw new Error("O aplicativo aceita somente contas de usuário.");
-      await PrevClima.request("/auth/login-mobile", {
-        method: "POST",
-        body: JSON.stringify({
-          email: registerForm.elements["email"].value.trim(),
-          password: registerForm.elements["password"].value,
-        }),
-      });
-      window.location.assign("/mobile/inicio.html");
+      sessionStorage.setItem("prevclima-pending-email", registerForm.elements["email"].value.trim());
+      sessionStorage.setItem("prevclima-account-return", "mobile");
+      window.location.assign("/conta.html#verify");
     } catch (error) {
       message.textContent = error.message;
       PrevClima.setBusy(button, false);

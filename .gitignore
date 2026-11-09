@@ -10,3 +10,7 @@ htmlcov/
 *.egg-info/
 frontend/
 tmp*
+
+.env.production
+backups/
+artifacts/

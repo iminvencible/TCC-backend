@@ -116,7 +116,7 @@ def client(db: Session):
 
 
 @pytest.fixture()
-def registered_client(client: TestClient):
+def registered_client(client: TestClient, mail_outbox):
     response = client.post(
         "/api/v1/auth/register",
         json={
@@ -128,8 +128,39 @@ def registered_client(client: TestClient):
         },
     )
     assert response.status_code == 201
+    verify_and_login(client, mail_outbox, "maria@exemplo.com", "Senha123!")
     return client
 
 
 def csrf_headers(client: TestClient) -> dict[str, str]:
     return {"X-CSRF-Token": client.cookies.get("prevclima_csrf")}
+
+
+@pytest.fixture(autouse=True)
+def mail_outbox(monkeypatch):
+    from app import email_auth
+
+    messages = []
+    monkeypatch.setattr(
+        email_auth,
+        "send_code",
+        lambda email, purpose, code: messages.append((email, purpose, code)),
+    )
+    return messages
+
+
+def verify_and_login(client, messages, email, password):
+    code = next(
+        code
+        for recipient, purpose, code in reversed(messages)
+        if recipient == email and purpose == "verify"
+    )
+    response = client.post(
+        "/api/v1/auth/verify-email",
+        json={"email": email, "code": code},
+        headers=csrf_headers(client) if client.cookies.get("prevclima_csrf") else {},
+    )
+    assert response.status_code == 200, response.text
+    login = client.post("/api/v1/auth/login", json={"email": email, "password": password})
+    assert login.status_code == 200, login.text
+    return login

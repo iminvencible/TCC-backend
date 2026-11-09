@@ -21,6 +21,7 @@ def add_user(db, *, email: str, role_code: str, public_code: str) -> User:
         public_code=public_code,
         name=f"Conta {role_code}",
         email=email,
+        email_verified_at=datetime.now(UTC),
         password_hash=hash_password("Senha123!"),
         role_id=role.id,
     )
@@ -175,9 +176,9 @@ def test_admin_can_create_only_meteorologists(client: TestClient, db):
         "/api/v1/alerts",
         headers=csrf_headers(client),
         json={
-            "title": "Aviso administrativo indevido",
-            "message": "A conta administrativa nao pode emitir este aviso.",
-            "event_type": "HEAVY_RAIN",
+            "title": "Aviso emitido pelo administrador",
+            "message": "O administrador também pode emitir avisos meteorológicos.",
+            "event_type": "SEVERE_STORM",
             "severity": "HIGH",
             "area_name": "Santos",
             "latitude": -23.96,
@@ -188,14 +189,14 @@ def test_admin_can_create_only_meteorologists(client: TestClient, db):
             "valid_until": (now + timedelta(hours=2)).isoformat(),
         },
     )
-    assert direct_alert.status_code == 403
-    assert client.get("/api/v1/reports/review-queue").status_code == 403
+    assert direct_alert.status_code == 201
+    assert client.get("/api/v1/reports/review-queue").status_code == 200
     assert (
         client.post(
             "/api/v1/integrations/inmet/sync-warnings",
             headers=csrf_headers(client),
         ).status_code
-        == 403
+        == 200
     )
 
 

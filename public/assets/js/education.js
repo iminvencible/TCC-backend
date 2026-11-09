@@ -13,6 +13,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     source.target = "_blank";
     source.rel = "noopener noreferrer";
     if (/^https?:\/\//.test(item.reference_url)) source.href = item.reference_url;
+    if (item.media_url && /^\/assets\/img\/safety-[a-z]+\.svg$/.test(item.media_url)) {
+      const picture = document.createElement("img");
+      picture.src = item.media_url; picture.alt = ""; picture.width = 200; picture.height = 140;
+      picture.loading = "lazy"; article.append(picture);
+    }
     article.append(title, body, source);
     return article;
   }

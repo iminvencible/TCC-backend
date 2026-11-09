@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PrevClima — Confirmar acesso</title>
+  <link rel="stylesheet" href="/assets/css/styles.css"><link rel="stylesheet" href="/assets/css/design-refresh.css">
+  <script src="/assets/js/api.js" defer></script><script src="/assets/js/account.js" defer></script>
+</head>
+<body class="auth-page"><main class="auth-shell"><div class="auth-form-column">
+<header class="auth-brand"><h1>Prev<span>Clima</span></h1><p>Tecnologia a serviço da segurança climática</p></header>
+<section class="auth-card"><h2 id="account-title">Confirmar e-mail</h2>
+<p>Informe seu e-mail, solicite o código e confira sua caixa de entrada e spam.</p>
+<form id="account-form">
+<div class="field"><label for="email">E-mail</label><input id="email" name="email" type="email" autocomplete="email" required></div>
+<button id="send-code" class="button secondary" type="button">Enviar / reenviar código</button>
+<div class="field"><label for="code">Código recebido</label><input id="code" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" required></div>
+<div id="password-field" class="field" hidden><label for="password">Nova senha</label><input id="password" name="password" type="password" autocomplete="new-password" minlength="6" maxlength="128"><span class="helper">Mínimo de 6 caracteres, com uma maiúscula e um símbolo.</span></div>
+<p id="account-message" role="status" aria-live="polite"></p><button id="submit-code" class="button" type="submit">Confirmar cadastro</button>
+</form></section><a id="back-login" class="guest-link" href="/">Voltar para entrar</a>
+</div></main></body></html>

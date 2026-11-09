@@ -297,3 +297,39 @@ class EducationalContent(Base):
     media_url: Mapped[str | None] = mapped_column(String(500))
     reference_url: Mapped[str] = mapped_column(String(500), nullable=False)
     published_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class EmailChallenge(Base):
+    __tablename__ = "email_challenges"
+    __table_args__ = (UniqueConstraint("user_id", "purpose", name="uq_email_challenge"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    purpose: Mapped[str] = mapped_column(String(16))
+    token_hash: Mapped[str] = mapped_column(String(64))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    attempts: Mapped[int] = mapped_column(default=0)
+    consumed: Mapped[bool] = mapped_column(default=False)
+
+
+class AuthRateLimit(Base):
+    __tablename__ = "auth_rate_limits"
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    count: Mapped[int] = mapped_column(default=0)
+    reset_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+
+
+class SevereForecast(Base):
+    __tablename__ = "severe_forecasts"
+    __table_args__ = (
+        CheckConstraint("valid_until > issued_at", name="ck_severe_validity"),
+        CheckConstraint("severity IN ('LOW','MODERATE','HIGH','CRITICAL')", name="ck_severe_level"),
+    )
+    id: Mapped[int] = mapped_column(primary_key=True)
+    created_by: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    area_name: Mapped[str] = mapped_column(String(160))
+    severity: Mapped[str] = mapped_column(String(24))
+    description: Mapped[str] = mapped_column(Text)
+    polygon: Mapped[dict] = mapped_column(JSON)
+    issued_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    valid_until: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    published_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

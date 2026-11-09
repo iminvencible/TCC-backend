@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -7,9 +8,13 @@ WORKDIR /app
 
 COPY pyproject.toml ./
 COPY app ./app
-RUN pip install --no-cache-dir .
+# Optional CA bundle for development environments behind an HTTPS proxy.
+RUN --mount=type=secret,id=proxy_ca \
+    if [ -f /run/secrets/proxy_ca ]; then \
+      PIP_CERT=/run/secrets/proxy_ca pip install --no-cache-dir .; \
+    else pip install --no-cache-dir .; fi
 
-COPY . .
+COPY --chown=10001:10001 . .
 
 RUN useradd --create-home --uid 10001 appuser
 USER appuser

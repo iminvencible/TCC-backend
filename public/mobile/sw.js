@@ -1,4 +1,4 @@
-const CACHE = "prevclima-mobile-v4";
+const CACHE = "prevclima-mobile-v5";
 const SHELL = [
   "/mobile/",
   "/mobile/inicio.html",
@@ -6,7 +6,9 @@ const SHELL = [
   "/mobile/mobile.js",
   "/mobile/mobile-home.js",
   "/mobile/icon.svg",
-  "/assets/js/api.js"
+  "/assets/js/api.js",
+  "/assets/js/notifications.js",
+  "/assets/css/notifications.css"
 ];
 
 self.addEventListener("install", (event) => {

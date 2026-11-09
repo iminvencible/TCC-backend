@@ -5,6 +5,7 @@ from sqlalchemy import select
 
 from app.config import get_settings
 from app.database import SessionLocal
+from app.education_seed import ensure_education
 from app.models import EducationalContent, Forecast, Role, User, WeatherAlert
 from app.security import hash_password
 
@@ -215,6 +216,7 @@ def main():
     settings = get_settings()
     with SessionLocal() as db:
         roles = ensure_roles(db)
+        ensure_education(db)
         if settings.seed_demo_data:
             ensure_user(
                 db,

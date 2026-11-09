@@ -253,3 +253,8 @@ a.btn {
     scroll-behavior: auto !important;
   }
 }
+
+.polygon-map { height: 320px; min-height: 260px; }
+.publication-summary { white-space: pre-wrap; overflow-wrap: anywhere; }
+#editor { width: min(960px, 95vw); max-height: 92vh; overflow: auto; }
+#editor [hidden] { display: none !important; }

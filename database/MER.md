@@ -146,3 +146,15 @@ Os atributos do diagrama são os principais campos de cada entidade. O inventár
 ## Aplicação e reversão
 
 Em uma cópia de desenvolvimento: `alembic upgrade head` e `alembic check`. Em um banco existente, faça backup e use a migração incremental. O SQL de criação completo é para bancos vazios. A reversão com `alembic downgrade 5f0e7c29b4a1` remove as duas novas tabelas e seus dados; não é necessária para atualizar.
+
+## Cadastro confirmado e previsões manuais (6da588e98c8b)
+
+- `email_challenges`: um desafio por usuário e finalidade (`verify`/`reset`),
+  hash do código, expiração, contagem de tentativas e indicação de consumo.
+- `auth_rate_limits`: chaves HMAC de IP/identidade, contador e fim da janela.
+- `severe_forecasts`: autor, região, nível, descrição, polígono GeoJSON,
+  emissão/validade e instante imutável de publicação. Não contém medições numéricas.
+- Relações: usuário 1:N previsões severas e usuário 1:N desafios; a combinação
+  usuário/finalidade é única. Desativação de contas preserva suas previsões.
+
+As migrações continuam sendo a referência executável para instalações e atualizações.

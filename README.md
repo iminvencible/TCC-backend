@@ -4,6 +4,20 @@ Aplicação web, PWA móvel para navegadores compatíveis e API FastAPI para a p
 avisos meteorológicos do TCC. O projeto usa MySQL no Docker e SQLite como opção
 leve de desenvolvimento.
 
+## Publicar gratuitamente a partir do Windows
+
+Siga o [guia de hospedagem no Windows](docs/HOSPEDAGEM_WINDOWS.md) para usar
+Docker Desktop, MySQL persistente e um endereço HTTPS do Tailscale Funnel.
+O comando `prevclima.ps1` oferece configuração, início, backup, restauração e atualização.
+O site só fica disponível enquanto o PC e o Docker estiverem em execução.
+
+Cadastro público exige confirmação por e-mail. Configure SMTP antes de usar o cadastro;
+contas locais criadas pelo bootstrap administrativo já estão confirmadas. A senha
+segue o TCC: seis caracteres ou mais, uma maiúscula e um símbolo.
+
+Consulte [a correspondência com o documento](docs/ALINHAMENTO_TCC.md) para regras,
+interfaces novas e diferenças tecnológicas mantidas intencionalmente.
+
 ## Recursos concluídos
 
 - Site responsivo em português do Brasil, inspirado no protótipo do Figma.
@@ -22,7 +36,7 @@ leve de desenvolvimento.
 - Meteorologista: emissão direta de avisos, revisão de relatos, sincronização manual de
   avisos oficiais do INMET e marcação de aviso como alarme falso ou pendente de
   correção, com histórico de auditoria.
-- Administrador: criação apenas de contas de meteorologista, alteração de função e
+- Meteorologistas e administrador: criação de contas de meteorologista, alteração de função e
   desativação segura de contas. A desativação preserva o histórico e revoga as
   sessões existentes.
 - Origem identificada em cada aviso: `DEMO`, `MANUAL` ou `INMET`.
@@ -206,7 +220,8 @@ regras de integridade. A revisão `3b6f82078bcf` acrescenta `weather_stations` e
 `/painel.html`, `/admin.html` e `/profissional.html` abrem a nova central visual,
 adaptada do HTML fornecido. CSS, componentes de interface, mapa e estação foram
 separados em arquivos. Não há sessão, alertas ou contas simulados em localStorage.
-O administrador gerencia contas; o meteorologista emite e revisa avisos e relatos.
+Meteorologistas gerenciam contas, emitem previsões e avisos e revisam relatos.
+O administrador herda essas capacidades; sua conta é protegida.
 Ambos consultam estações. Autorização e CSRF continuam sendo verificados na API.
 O site e o aplicativo também oferecem consulta pública em `/estacoes.html`, usando
 o mesmo catálogo e histórico persistido.

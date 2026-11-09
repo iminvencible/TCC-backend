@@ -1,0 +1,7 @@
+.weather-notification { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 3000; max-width: min(380px, calc(100vw - 2rem)); padding: 1.2rem; border: 1px solid #f4c64c; border-radius: 14px; background: #10223e; color: #fff; box-shadow: 0 12px 40px #0006; }
+.weather-notification[hidden] { display: none; }
+.weather-notification p { margin: .6rem 0; }
+.weather-notification a { color: #f4c64c; margin-right: 1rem; }
+.weather-notification button { min-height: 44px; background: transparent; color: white; border: 1px solid #71819c; border-radius: 8px; padding: .4rem .8rem; cursor: pointer; }
+.weather-notification :focus-visible { outline: 3px solid #f4c64c; outline-offset: 3px; }
+@media(max-width:600px) { .weather-notification { bottom: 5.5rem; right: 1rem; left: 1rem; } }

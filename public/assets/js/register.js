@@ -20,7 +20,9 @@ document.addEventListener("DOMContentLoaded", () => {
           state: state || null,
         }),
       });
-      window.location.assign("/localizacao.html");
+      sessionStorage.setItem("prevclima-pending-email", form.email.value.trim());
+      sessionStorage.setItem("prevclima-account-return", "web");
+      window.location.assign("/conta.html#verify");
     } catch (error) {
       message.textContent = error.message;
     } finally {

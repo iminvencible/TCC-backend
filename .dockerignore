@@ -12,3 +12,7 @@ marcio_tcc-main.zip
 prevclima.db
 tests
 tmp*
+
+.env.production
+backups
+artifacts

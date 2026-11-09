@@ -1,5 +1,6 @@
 """Provision the first administrator without demo accounts or weather."""
 
+from datetime import UTC, datetime
 from getpass import getpass
 from uuid import uuid4
 
@@ -24,6 +25,7 @@ def create_admin(db: Session, payload: RegisterRequest) -> User:
         public_code=f"ADM-{uuid4().hex[:12].upper()}",
         name=payload.name,
         email=email,
+        email_verified_at=datetime.now(UTC),
         password_hash=hash_password(payload.password),
         role_id=roles["ADMIN"].id,
     )
@@ -37,7 +39,7 @@ def create_admin(db: Session, payload: RegisterRequest) -> User:
 def main() -> None:
     name = input("Nome do administrador: ").strip()
     email = input("E-mail: ").strip()
-    password = getpass("Senha (maiúscula, minúscula, número e símbolo): ")
+    password = getpass("Senha (mínimo 6 caracteres, maiúscula e símbolo): ")
     if password != getpass("Confirme a senha: "):
         raise SystemExit("As senhas não coincidem; nenhuma conta foi criada.")
     try:

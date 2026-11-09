@@ -12,6 +12,7 @@ from app.dependencies import CurrentUser, DbSession, optional_current_user, requ
 from app.inmet_sync import warning_feed_status
 from app.models import AlertRead, AlertReview, Forecast, User, WeatherAlert
 from app.open_meteo_sync import get_open_meteo_or_fallback
+from app.routers.severe_forecasts import list_forecasts as severe_forecasts
 from app.schemas import (
     AlertCreateRequest,
     AlertOut,
@@ -147,7 +148,6 @@ def alerts_for_location(
                 selected.append(alert)
             continue
         if alert.latitude is None or alert.longitude is None or alert.radius_km is None:
-            selected.append(alert)
             continue
         if distance_km(latitude, longitude, float(alert.latitude), float(alert.longitude)) <= float(
             alert.radius_km
@@ -210,6 +210,8 @@ def create_alert(
     db: DbSession,
     user: Annotated[User, Depends(require_roles("METEOROLOGIST"))],
 ):
+    if payload.valid_until <= now_utc() or payload.issued_at > now_utc():
+        raise HTTPException(422, "A validade deve estar no futuro e a emissão não pode ser futura")
     alert = WeatherAlert(
         created_by=user.id,
         origin="MANUAL",
@@ -224,7 +226,18 @@ def create_alert(
         longitude=payload.longitude,
         radius_km=payload.radius_km,
         polygon=payload.polygon,
-        recommendations=payload.recommendations,
+        recommendations=(
+            [
+                "Procure abrigo em uma construção resistente, "
+                "no piso mais baixo e longe de janelas.",
+                "Proteja a cabeça e acompanhe as orientações da Defesa Civil.",
+            ]
+            if payload.event_type == "TORNADO"
+            else [
+                "Procure abrigo e mantenha distância de janelas, árvores e estruturas frágeis.",
+                "Não atravesse áreas alagadas. Acompanhe as orientações da Defesa Civil.",
+            ]
+        ),
         issued_at=payload.issued_at,
         valid_until=payload.valid_until,
     )
@@ -539,5 +552,24 @@ def map_data(
         alerts=alerts,
         forecast_areas=forecast_areas,
         forecast_points=forecast_points,
+        severe_forecast_areas=severe_forecasts(db, limit=200),
         generated_at=now_utc(),
     )
+
+
+@router.get("/notifications", response_model=list[AlertOut])
+def notifications(db: DbSession, user: CurrentUser):
+    if not user.weather_notifications:
+        return []
+    latitude, longitude = user.latitude, user.longitude
+    if latitude is None and user.city and user.state:
+        forecast, _ = get_open_meteo_or_fallback(
+            db, city=user.city, state=user.state, require_coordinates=True
+        )
+        if forecast:
+            latitude, longitude = forecast.latitude, forecast.longitude
+    if latitude is None or longitude is None:
+        return []
+    alerts = alerts_for_location(active_alerts(db), float(latitude), float(longitude))
+    read_ids = user_read_ids(db, user, [a.id for a in alerts])
+    return [alert_out(a, read_ids) for a in alerts if a.id not in read_ids]

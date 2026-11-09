@@ -14,7 +14,7 @@ from pydantic import (
     model_validator,
 )
 
-PASSWORD_PATTERN = re.compile(r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,128}$")
+PASSWORD_PATTERN = re.compile(r"^(?=.*[A-Z])(?=.*[^A-Za-z0-9\s]).{6,128}$")
 
 
 def utc_iso(value: datetime) -> str:
@@ -51,6 +51,11 @@ def validate_geojson_polygon(value: dict) -> dict:
             point_count += 1
             if point_count > 10_000:
                 raise ValueError("o polígono não pode conter mais de 10000 pontos")
+        if len({tuple(point) for point in ring[:-1]}) < 3:
+            raise ValueError("a área precisa de pelo menos três pontos distintos")
+        area = sum(a[0] * b[1] - b[0] * a[1] for a, b in zip(ring, ring[1:], strict=False))
+        if abs(area) < 1e-12:
+            raise ValueError("a área do polígono não pode ser zero")
     return value
 
 
@@ -59,7 +64,7 @@ class RegisterRequest(BaseModel):
 
     name: str = Field(min_length=2, max_length=120)
     email: EmailStr
-    password: str = Field(min_length=8, max_length=128)
+    password: str = Field(min_length=6, max_length=128)
     city: str | None = Field(default=None, max_length=100)
     state: str | None = Field(default=None, min_length=2, max_length=2)
 
@@ -77,7 +82,7 @@ class RegisterRequest(BaseModel):
     @classmethod
     def validate_password(cls, value: str) -> str:
         if not PASSWORD_PATTERN.match(value):
-            raise ValueError("use letras maiúsculas e minúsculas, número e caractere especial")
+            raise ValueError("use pelo menos 6 caracteres, uma maiúscula e um símbolo")
         return value
 
     @model_validator(mode="after")
@@ -228,14 +233,14 @@ class AlertCreateRequest(BaseModel):
 
     title: str = Field(min_length=3, max_length=140)
     message: str = Field(min_length=10, max_length=5000)
-    event_type: Literal["SEVERE_STORM", "TORNADO", "WINDSTORM", "HEAVY_RAIN"]
+    event_type: Literal["SEVERE_STORM", "TORNADO"]
     severity: Literal["LOW", "MODERATE", "HIGH", "CRITICAL"]
     area_name: str = Field(min_length=2, max_length=160)
     latitude: Decimal | None = Field(default=None, ge=-90, le=90)
     longitude: Decimal | None = Field(default=None, ge=-180, le=180)
     radius_km: Decimal | None = Field(default=None, gt=0, le=1000)
     polygon: dict | None = None
-    recommendations: list[str] = Field(min_length=1, max_length=12)
+    recommendations: list[str] = Field(default_factory=list, max_length=12)
     issued_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     valid_until: datetime
 
@@ -379,6 +384,7 @@ class MapDataOut(BaseModel):
     alerts: list[MapAlertOut]
     forecast_areas: list[MapForecastOut]
     forecast_points: list[MapForecastPointOut] = Field(default_factory=list)
+    severe_forecast_areas: list["SevereForecastOut"] = Field(default_factory=list)
     generated_at: datetime
 
     @field_serializer("generated_at")
@@ -466,3 +472,77 @@ class InmetWarningSyncOut(BaseModel):
     imported: int
     skipped: int
     stored_active_alerts: int
+
+
+class EmailRequest(BaseModel):
+    email: EmailStr
+
+
+class CodeRequest(EmailRequest):
+    code: str = Field(pattern=r"^\d{6}$")
+
+
+class ResetPasswordRequest(CodeRequest):
+    password: str = Field(min_length=6, max_length=128)
+    _password_rule = field_validator("password")(RegisterRequest.validate_password.__func__)
+
+
+class RegistrationOut(BaseModel):
+    status: Literal["pending_verification"] = "pending_verification"
+    email: EmailStr
+    message: str
+
+
+class SevereForecastRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    area_name: str = Field(min_length=2, max_length=160)
+    severity: Literal["LOW", "MODERATE", "HIGH", "CRITICAL"]
+    description: str = Field(min_length=10, max_length=5000)
+    polygon: dict
+    issued_at: datetime
+    valid_until: datetime
+
+    @field_validator("area_name", "description", mode="before")
+    @classmethod
+    def strip_text(cls, value: str) -> str:
+        return value.strip()
+
+    @field_validator("polygon")
+    @classmethod
+    def check_polygon(cls, value: dict) -> dict:
+        return validate_geojson_polygon(value)
+
+    @field_validator("issued_at", "valid_until")
+    @classmethod
+    def check_timezone(cls, value: datetime) -> datetime:
+        if value.tzinfo is None:
+            raise ValueError("informe data e hora com fuso horário")
+        return value.astimezone(UTC)
+
+    @model_validator(mode="after")
+    def check_time(self):
+        if self.valid_until <= self.issued_at or self.valid_until <= datetime.now(UTC):
+            raise ValueError("a validade deve estar no futuro e ser posterior à emissão")
+        if self.issued_at > datetime.now(UTC):
+            raise ValueError("a emissão não pode estar no futuro")
+        return self
+
+
+class SevereForecastOut(SevereForecastRequest):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    created_by: int
+    published_at: datetime
+    editable_until: datetime
+
+    # Output must remain readable after its validity period ends.
+    @model_validator(mode="after")
+    def check_time(self):
+        return self
+
+    @field_serializer("issued_at", "valid_until", "published_at", "editable_until")
+    def times(self, value: datetime) -> str:
+        return utc_iso(value)
+
+
+MapDataOut.model_rebuild()

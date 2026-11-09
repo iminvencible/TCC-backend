@@ -30,6 +30,9 @@ def test_production_accepts_explicit_safe_settings():
         jwt_secret="a-unique-production-secret-that-is-long-enough",
         cookie_secure=True,
         cors_origins=["https://prevclima.example"],
+        public_base_url="https://prevclima.example",
+        smtp_host="smtp.example.com",
+        smtp_from="test@example.com",
     )
     settings.validate_production()
 

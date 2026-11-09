@@ -94,7 +94,7 @@ MobileUser = Annotated[User, Depends(current_mobile_user)]
 
 def require_roles(*roles: str):
     def dependency(user: CurrentUser) -> User:
-        if user.role.code not in roles:
+        if user.role.code not in roles and user.role.code != "ADMIN":
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Permissão insuficiente"
             )

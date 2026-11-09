@@ -18,7 +18,7 @@ export async function drawMap(container) {
     );
     return null;
   }
-  const map = L.map(container).setView([-23.8, -46.5], 6);
+  const map = L.map(container, { zoomAnimation: false, fadeAnimation: false, markerZoomAnimation: false }).setView([-23.8, -46.5], 6);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 18,
     attribution: "© OpenStreetMap contributors",
@@ -49,6 +49,11 @@ export async function drawMap(container) {
       )
       .addTo(alerts);
   }
+  for (const f of [...(data.forecast_areas || []), ...(data.severe_forecast_areas || [])]) {
+    const popup = document.createElement("div");
+    popup.textContent = `${f.area_name || f.city} · ${PrevClima.severityName(f.severity)} — ${f.description || "Área de previsão"} · Até ${new Date(f.valid_until).toLocaleString("pt-BR")}`;
+    L.geoJSON(f.polygon, { style: { color: "#9b7af5", fillOpacity: 0.18 } }).bindPopup(popup).addTo(forecasts);
+  }
   for (const f of data.forecast_points || []) {
     if (f.latitude != null && f.longitude != null)
       L.circleMarker([Number(f.latitude), Number(f.longitude)], {
@@ -63,11 +68,11 @@ export async function drawMap(container) {
   L.control
     .layers(null, {
       "Avisos meteorológicos": alerts,
-      "Previsões pontuais": forecasts,
+      "Previsões locais e de tempo severo": forecasts,
     })
     .addTo(map);
   const point = data.forecast_points?.[0];
   if (point) map.setView([Number(point.latitude), Number(point.longitude)], 9);
-  else if (alerts.getLayers().length) map.fitBounds(L.featureGroup(alerts.getLayers()).getBounds().pad(.15));
+  else if (alerts.getLayers().length) map.fitBounds(L.featureGroup(alerts.getLayers()).getBounds().pad(.15), { animate: false });
   return map;
 }

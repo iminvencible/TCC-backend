@@ -10,7 +10,7 @@ from app.models import AlertRead, Forecast, Role, User, WeatherReport
 from app.routers.weather import point_in_polygon
 from app.schemas import AlertCreateRequest
 from app.security import hash_password
-from tests.conftest import csrf_headers
+from tests.conftest import csrf_headers, verify_and_login
 
 
 def test_health_and_static_page(client: TestClient):
@@ -27,7 +27,7 @@ def test_health_and_static_page(client: TestClient):
         assert client.get(path).status_code == 200
 
 
-def test_register_login_and_profile(client: TestClient):
+def test_register_login_and_profile(client: TestClient, mail_outbox):
     registration = client.post(
         "/api/v1/auth/register",
         json={
@@ -39,7 +39,9 @@ def test_register_login_and_profile(client: TestClient):
         },
     )
     assert registration.status_code == 201
-    body = registration.json()
+    assert registration.json()["status"] == "pending_verification"
+    assert "prevclima_access" not in client.cookies
+    body = verify_and_login(client, mail_outbox, "maria@exemplo.com", "Senha123!").json()
     assert body["user"]["email"] == "maria@exemplo.com"
     assert body["user"]["role"] == "USER"
     assert body["user"]["state"] == "SP"
@@ -354,6 +356,7 @@ def test_only_admin_can_create_professional_accounts(registered_client: TestClie
             public_code="TEST-ADMIN",
             name="Administrador Teste",
             email="admin-teste@exemplo.com",
+            email_verified_at=datetime.now(UTC),
             password_hash=hash_password("Admin123!"),
             role_id=admin_role.id,
         )
@@ -384,7 +387,7 @@ def test_only_admin_can_create_professional_accounts(registered_client: TestClie
         json={
             "title": "Alerta profissional",
             "message": "Mensagem validada pelo meteorologista.",
-            "event_type": "HEAVY_RAIN",
+            "event_type": "SEVERE_STORM",
             "severity": "HIGH",
             "area_name": "Santos",
             "latitude": -23.96,

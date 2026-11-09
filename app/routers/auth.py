@@ -1,13 +1,24 @@
 import secrets
+from datetime import UTC, datetime
 
-from fastapi import APIRouter, HTTPException, Response, status
+from fastapi import APIRouter, HTTPException, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app.config import get_settings
 from app.dependencies import CurrentUser, DbSession, MobileUser
+from app.email_auth import consume_challenge, issue_challenge, rate_limit
 from app.models import Role, User
-from app.schemas import AuthResponse, LoginRequest, MessageOut, RegisterRequest
+from app.schemas import (
+    AuthResponse,
+    CodeRequest,
+    EmailRequest,
+    LoginRequest,
+    MessageOut,
+    RegisterRequest,
+    RegistrationOut,
+    ResetPasswordRequest,
+)
 from app.security import create_access_token, create_csrf_token, hash_password, verify_password
 from app.services import user_out
 
@@ -55,8 +66,9 @@ def set_auth_cookies(
     return csrf
 
 
-@router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
-def register(payload: RegisterRequest, response: Response, db: DbSession):
+@router.post("/register", response_model=RegistrationOut, status_code=status.HTTP_201_CREATED)
+def register(payload: RegisterRequest, request: Request, db: DbSession):
+    rate_limit(db, request, "email", normalized_email(str(payload.email)))
     email = normalized_email(str(payload.email))
     if db.scalar(select(User.id).where(User.email == email)):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="E-mail já cadastrado")
@@ -83,8 +95,10 @@ def register(payload: RegisterRequest, response: Response, db: DbSession):
             status_code=status.HTTP_409_CONFLICT, detail="E-mail já cadastrado"
         ) from error
     db.refresh(user)
-    csrf = set_auth_cookies(response, user)
-    return AuthResponse(user=user_out(user), csrf_token=csrf)
+    issue_challenge(db, user, "verify")
+    return RegistrationOut(
+        email=user.email, message="Confira seu e-mail e confirme o cadastro com o código recebido."
+    )
 
 
 @router.get("/mobile-session", response_model=AuthResponse)
@@ -93,14 +107,16 @@ def mobile_session(user: MobileUser):
 
 
 @router.post("/login", response_model=AuthResponse)
-def login(payload: LoginRequest, response: Response, db: DbSession):
+def login(payload: LoginRequest, response: Response, request: Request, db: DbSession):
+    rate_limit(db, request, "login", normalized_email(str(payload.email)))
     user = authenticate(payload, db)
     csrf = set_auth_cookies(response, user)
     return AuthResponse(user=user_out(user), csrf_token=csrf)
 
 
 @router.post("/login-mobile", response_model=AuthResponse)
-def login_mobile(payload: LoginRequest, response: Response, db: DbSession):
+def login_mobile(payload: LoginRequest, response: Response, request: Request, db: DbSession):
+    rate_limit(db, request, "login", normalized_email(str(payload.email)))
     user = authenticate(payload, db)
     if user.role.code != "USER":
         raise HTTPException(
@@ -119,11 +135,16 @@ def authenticate(payload: LoginRequest, db: DbSession) -> User:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="E-mail ou senha inválidos"
         )
+    if user.email_verified_at is None:
+        raise HTTPException(
+            403, "Confirme seu e-mail para entrar. Solicite um novo código se necessário."
+        )
     return user
 
 
 @router.post("/login-professional", response_model=AuthResponse)
-def login_professional(payload: LoginRequest, response: Response, db: DbSession):
+def login_professional(payload: LoginRequest, response: Response, request: Request, db: DbSession):
+    rate_limit(db, request, "login", normalized_email(str(payload.email)))
     user = authenticate(payload, db)
     if user.role.code not in {"METEOROLOGIST", "ADMIN"}:
         raise HTTPException(
@@ -145,3 +166,46 @@ def logout(response: Response, user: CurrentUser, db: DbSession):
 @router.get("/me", response_model=AuthResponse)
 def me(user: CurrentUser):
     return AuthResponse(user=user_out(user), csrf_token="")
+
+
+@router.post("/resend-verification", response_model=MessageOut)
+def resend(payload: EmailRequest, request: Request, db: DbSession):
+    email = normalized_email(str(payload.email))
+    rate_limit(db, request, "email", email)
+    user = db.scalar(select(User).where(User.email == email, User.is_active.is_(True)))
+    if user and user.email_verified_at is None:
+        issue_challenge(db, user, "verify")
+    return MessageOut(message="Se houver um cadastro pendente, enviaremos um novo código.")
+
+
+@router.post("/verify-email", response_model=MessageOut)
+def verify_email(payload: CodeRequest, request: Request, db: DbSession):
+    email = normalized_email(str(payload.email))
+    rate_limit(db, request, "code", email)
+    user = consume_challenge(db, email, "verify", payload.code)
+    user.email_verified_at = datetime.now(UTC)
+    db.commit()
+    return MessageOut(message="E-mail confirmado. Você já pode entrar.")
+
+
+@router.post("/forgot-password", response_model=MessageOut)
+def forgot_password(payload: EmailRequest, request: Request, db: DbSession):
+    email = normalized_email(str(payload.email))
+    rate_limit(db, request, "email", email)
+    user = db.scalar(select(User).where(User.email == email, User.is_active.is_(True)))
+    if user and user.email_verified_at is not None:
+        issue_challenge(db, user, "reset")
+    return MessageOut(
+        message="Se houver uma conta confirmada, enviaremos um código de redefinição."
+    )
+
+
+@router.post("/reset-password", response_model=MessageOut)
+def reset_password(payload: ResetPasswordRequest, request: Request, db: DbSession):
+    email = normalized_email(str(payload.email))
+    rate_limit(db, request, "code", email)
+    user = consume_challenge(db, email, "reset", payload.code)
+    user.password_hash = hash_password(payload.password)
+    user.token_version += 1
+    db.commit()
+    return MessageOut(message="Senha atualizada. Entre novamente com a nova senha.")

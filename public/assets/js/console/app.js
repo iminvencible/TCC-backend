@@ -13,12 +13,13 @@ import {
 } from "./ui.js";
 import { stationView } from "./stations.js";
 import { drawMap } from "./map.js";
+import { openPublisher, forecastList } from "./publishing.js";
 
 const page = document.querySelector("#page");
 let user,
   map,
   navigationVersion = 0;
-const professional = () => user.role === "METEOROLOGIST";
+const professional = () => ["METEOROLOGIST", "ADMIN"].includes(user.role);
 const nav = [
   ["dashboard", "Painel", "◫"],
   ["alerts", "Alertas", "◉"],
@@ -74,6 +75,9 @@ function activityLabel(value) {
       INMET_OBSERVATIONS_SYNCED: "Medições INMET atualizadas",
       BDMEP_IMPORTED: "Histórico BDMEP importado",
       ALERT_REVIEWED: "Alerta revisado",
+      SEVERE_FORECAST_CREATED: "Previsão de tempo severo publicada",
+      SEVERE_FORECAST_UPDATED: "Previsão de tempo severo atualizada",
+      SEVERE_FORECAST_DELETED: "Previsão de tempo severo excluída",
       METEOROLOGIST_CREATED: "Meteorologista credenciado",
       USER_ROLE_CHANGED: "Permissão de conta atualizada",
       USER_DEACTIVATED: "Conta desativada",
@@ -125,42 +129,17 @@ async function alerts(host) {
   host.querySelector("#new-alert")?.addEventListener("click", newAlert);
 }
 
-function newAlert() {
-  const dialog = document.querySelector("#editor");
-  dialog.innerHTML = `<form id="alert-editor" class="stack"><div class="row spread"><h2>Emitir alerta</h2><button class="btn" type="button" id="close-editor">Fechar</button></div><div class="form-grid">${field("Título", "title", "text", 'required minlength="3" maxlength="140"')}${field("Região", "area_name", "text", 'required minlength="2" maxlength="160"')}<label>Evento<select class="field" name="event_type"><option value="SEVERE_STORM">Tempestade severa</option><option value="HEAVY_RAIN">Chuva intensa</option><option value="WINDSTORM">Vendaval</option><option value="TORNADO">Tornado</option></select></label><label>Gravidade<select class="field" name="severity"><option value="MODERATE">Moderado</option><option value="HIGH">Alto</option><option value="CRITICAL">Crítico</option><option value="LOW">Baixo</option></select></label><label class="full">Mensagem<textarea class="field" name="message" minlength="10" maxlength="5000" required></textarea></label>${field("Latitude", "latitude", "number", 'required min="-90" max="90" step="any"')}${field("Longitude", "longitude", "number", 'required min="-180" max="180" step="any"')}${field("Raio (km)", "radius_km", "number", 'required min="0.1" max="1000" step="any"')}${field("Válido até", "valid_until", "datetime-local", "required")}<label class="full">Recomendações (uma por linha)<textarea class="field" name="recommendations" required maxlength="3600"></textarea></label></div><p class="hint">O aviso será publicado no site e no aplicativo. A área é definida pelas coordenadas e pelo raio.</p><p id="editor-error" class="error" role="alert"></p><button class="btn primary" type="submit">Publicar alerta</button></form>`;
-  dialog.querySelector("#close-editor").onclick = () => dialog.close();
-  submit(dialog.querySelector("form"), async (data) => {
-    try {
-      await api(
-        "/alerts",
-        json("POST", {
-          ...data,
-          latitude: Number(data.latitude),
-          longitude: Number(data.longitude),
-          radius_km: Number(data.radius_km),
-          valid_until: new Date(data.valid_until).toISOString(),
-          recommendations: data.recommendations
-            .split("\n")
-            .map((s) => s.trim())
-            .filter(Boolean),
-        }),
-      );
-      dialog.close();
-      await navigate();
-      notify("Alerta publicado.");
-    } catch (error) {
-      dialog.querySelector("#editor-error").textContent = error.message;
-    }
-  });
-  dialog.showModal();
-}
+function newAlert() { openPublisher("alert", navigate); }
 
 async function mapView(host) {
-  host.innerHTML = panel(
+  host.innerHTML = `<div class="toolbar"><button class="btn primary" id="new-forecast">Emitir previsão</button><button class="btn" id="map-new-alert">Emitir alerta</button></div>` + panel(
     "Mapa meteorológico",
-    '<div id="console-map" class="console-map large"></div><p class="hint">Avisos oficiais do INMET e avisos manuais. Previsões pontuais do Open-Meteo são identificadas separadamente.</p>',
-  );
+    '<div id="console-map" class="console-map large"></div><p class="hint">Avisos INMET, alertas manuais e previsões de tempo severo. Pontos indicam previsões numéricas do Open-Meteo.</p>',
+  ) + '<section class="stack"><h2>Previsões de tempo severo</h2><div id="severe-forecasts" class="stack"></div></section>';
+  host.querySelector("#new-forecast").onclick = () => openPublisher("forecast", navigate);
+  host.querySelector("#map-new-alert").onclick = newAlert;
   map = await drawMap(host.querySelector("#console-map"));
+  await forecastList(host.querySelector("#severe-forecasts"), navigate);
 }
 
 async function reports(host) {
@@ -188,7 +167,7 @@ async function reports(host) {
 }
 
 async function users(host) {
-  host.innerHTML = `<div class="two">${panel("Credenciar meteorologista", `<form id="staff-form" class="stack">${field("Nome completo", "name", "text", 'required minlength="2" maxlength="120"')}${field("E-mail", "email", "email", "required")}${field("Senha temporária", "password", "password", 'required minlength="8" maxlength="128" autocomplete="new-password"')}<p class="hint">Use maiúscula, minúscula, número e símbolo.</p><button class="btn primary" type="submit">Criar conta</button></form>`)}${panel("Contas ativas", '<form id="user-search" class="row"><input class="field" name="search" aria-label="Nome, e-mail ou código" placeholder="Nome, e-mail ou código"><button type="submit" class="btn">Buscar</button></form><div id="accounts" class="stack"></div><div class="row"><button id="previous-users" class="btn">Anterior</button><button id="next-users" class="btn">Próximas</button></div>')}</div>`;
+  host.innerHTML = `<div class="two">${panel("Credenciar meteorologista", `<form id="staff-form" class="stack">${field("Nome completo", "name", "text", 'required minlength="2" maxlength="120"')}${field("E-mail", "email", "email", "required")}${field("Senha temporária", "password", "password", 'required minlength="6" maxlength="128" autocomplete="new-password"')}<p class="hint">Use pelo menos 6 caracteres, uma maiúscula e um símbolo.</p><button class="btn primary" type="submit">Criar conta</button></form>`)}${panel("Contas ativas", '<form id="user-search" class="row"><input class="field" name="search" aria-label="Nome, e-mail ou código" placeholder="Nome, e-mail ou código"><button type="submit" class="btn">Buscar</button></form><div id="accounts" class="stack"></div><div class="row"><button id="previous-users" class="btn">Anterior</button><button id="next-users" class="btn">Próximas</button></div>')}</div>`;
   let offset = 0,
     search = "";
   async function load() {
@@ -201,7 +180,7 @@ async function users(host) {
       data
         .map(
           (u) =>
-            `<article class="data-card"><div class="row spread"><strong>${esc(u.name)}</strong><span class="pill pri">${esc(PrevClima.roleName(u.role))}</span></div><p>${esc(u.email)}</p><p class="hint">${esc(u.public_code)}</p>${u.role !== "ADMIN" ? `<div class="row"><select class="field" aria-label="Função de ${esc(u.name)}" data-role="${u.id}"><option value="USER" ${u.role === "USER" ? "selected" : ""}>Usuário</option><option value="METEOROLOGIST" ${u.role === "METEOROLOGIST" ? "selected" : ""}>Meteorologista</option></select><button class="btn" data-save="${u.id}">Salvar função</button><button class="btn danger" data-disable="${u.id}">Desativar</button></div>` : ""}</article>`,
+            `<article class="data-card"><div class="row spread"><strong>${esc(u.name)}</strong><span class="pill pri">${esc(PrevClima.roleName(u.role))}</span></div><p>${esc(u.email)}</p><p class="hint">${esc(u.public_code)}</p>${u.role !== "ADMIN" && u.id !== user.id ? `<div class="row"><select class="field" aria-label="Função de ${esc(u.name)}" data-role="${u.id}"><option value="USER" ${u.role === "USER" ? "selected" : ""}>Usuário</option><option value="METEOROLOGIST" ${u.role === "METEOROLOGIST" ? "selected" : ""}>Meteorologista</option></select><button class="btn" data-save="${u.id}">Salvar função</button><button class="btn danger" data-disable="${u.id}">Desativar</button></div>` : ""}</article>`,
         )
         .join("") || empty("Nenhuma conta encontrada.");
     host.querySelectorAll("[data-save]").forEach(
@@ -261,13 +240,12 @@ async function users(host) {
 async function navigate() {
   const version = ++navigationVersion;
   const key = location.hash.slice(1) || "dashboard";
-  const allowed = nav.filter(
-    ([key]) => key !== (professional() ? "users" : "reports"),
-  );
+  const allowed = nav;
   if (!allowed.some(([name]) => name === key)) {
     location.hash = "dashboard";
     return;
   }
+  map?.stop();
   map?.remove();
   map = null;
   document.querySelector(".side").classList.remove("open");
@@ -286,6 +264,7 @@ async function navigate() {
   host.innerHTML = empty("Carregando dados…");
   try {
     await views[key](host);
+    if (version === navigationVersion) document.querySelector("#sync-status").textContent = `Consultado às ${new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
   } catch (error) {
     if (version === navigationVersion) {
       host.innerHTML = empty(error.message);

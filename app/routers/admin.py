@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -15,7 +16,7 @@ from app.services import user_out
 router = APIRouter(
     prefix="/admin",
     tags=["administracao"],
-    dependencies=[Depends(require_roles("ADMIN"))],
+    dependencies=[Depends(require_roles("ADMIN", "METEOROLOGIST"))],
 )
 
 
@@ -45,7 +46,7 @@ def list_users(
 def create_user(
     payload: StaffCreateRequest,
     db: DbSession,
-    admin: Annotated[User, Depends(require_roles("ADMIN"))],
+    admin: Annotated[User, Depends(require_roles("ADMIN", "METEOROLOGIST"))],
 ):
     email = normalized_email(str(payload.email))
     if db.scalar(select(User.id).where(User.email == email)):
@@ -58,6 +59,7 @@ def create_user(
         name=payload.name,
         email=email,
         password_hash=hash_password(payload.password),
+        email_verified_at=datetime.now(UTC),
         role_id=role.id,
         city=payload.city,
         state=payload.state,
@@ -88,7 +90,7 @@ def update_role(
     user_id: int,
     payload: RoleUpdateRequest,
     db: DbSession,
-    admin: Annotated[User, Depends(require_roles("ADMIN"))],
+    admin: Annotated[User, Depends(require_roles("ADMIN", "METEOROLOGIST"))],
 ):
     user = db.get(User, user_id)
     if not user:
@@ -121,15 +123,15 @@ def update_role(
 def deactivate_user(
     user_id: int,
     db: DbSession,
-    admin: Annotated[User, Depends(require_roles("ADMIN"))],
+    admin: Annotated[User, Depends(require_roles("ADMIN", "METEOROLOGIST"))],
 ):
     user = db.get(User, user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conta não encontrada")
-    if user.id == admin.id:
+    if user.id == admin.id or user.role.code == "ADMIN":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Você não pode desativar a própria conta",
+            detail="Você não pode desativar a própria conta nem uma conta administrativa",
         )
     if not user.is_active:
         return MessageOut(message="Conta já estava desativada")

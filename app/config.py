@@ -8,6 +8,13 @@ from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    public_base_url: str = "http://localhost:8000"
+    smtp_host: str = ""
+    smtp_port: int = Field(default=587, ge=1, le=65535)
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_from: str = ""
+    smtp_security: str = "starttls"
     app_name: str = "PrevClima"
     app_env: str = "development"
     database_url: str = "sqlite:///./prevclima.db"
@@ -72,6 +79,14 @@ class Settings(BaseSettings):
             raise RuntimeError("Defina JWT_SECRET unico com pelo menos 32 caracteres")
         if not self.cookie_secure:
             raise RuntimeError("COOKIE_SECURE deve estar habilitado em producao")
+        if not self.public_base_url.startswith("https://"):
+            raise RuntimeError("PUBLIC_BASE_URL deve usar HTTPS")
+        if (
+            not self.smtp_host
+            or not self.smtp_from
+            or self.smtp_security not in {"starttls", "ssl"}
+        ):
+            raise RuntimeError("Configure SMTP_HOST, SMTP_FROM e SMTP_SECURITY (starttls ou ssl)")
         if self.database_url.startswith("sqlite"):
             raise RuntimeError("Configure um banco de producao em vez do SQLite")
         if "*" in self.cors_origins:

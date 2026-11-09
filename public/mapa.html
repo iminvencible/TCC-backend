@@ -12,6 +12,8 @@
   <script src="/assets/js/api.js" defer></script>
   <script src="/assets/js/shell.js" defer></script>
   <script src="/assets/js/map.js" defer></script>
+<link rel="stylesheet" href="/assets/css/notifications.css">
+<script src="/assets/js/notifications.js" defer></script>
 </head>
 <body class="weather-map-page">
   <a class="skip-link" href="#map-search">Ir para a busca</a>
@@ -31,7 +33,8 @@
       <div class="map-actions"><button id="map-location" class="button secondary" type="button">◎ Minha localização</button><button id="map-refresh" class="button secondary" type="button">↻ Atualizar</button></div>
       <p id="map-status" class="map-status" role="status" aria-live="polite">Consultando fontes meteorológicas…</p>
       <section id="map-forecast" class="map-forecast" aria-label="Previsão selecionada" aria-live="polite"><p>Buscando a previsão da sua região…</p></section>
-      <details class="map-layers" open><summary>Camadas do mapa</summary><label><input id="forecast-layer" type="checkbox" checked><span class="layer-dot forecast-dot"></span>Previsão pontual</label><label><input id="alert-layer" type="checkbox" checked><span class="layer-dot warning-dot"></span>Áreas de avisos</label><p>A previsão de uma cidade não representa uma área de risco.</p></details>
+      <details class="map-layers" open><summary>Camadas do mapa</summary><label><input id="forecast-layer" type="checkbox" checked><span class="layer-dot forecast-dot"></span>Previsões locais e de tempo severo</label><label><input id="alert-layer" type="checkbox" checked><span class="layer-dot warning-dot"></span>Áreas de avisos</label><p>A previsão de uma cidade não representa uma área de risco.</p></details>
+      <section class="map-warnings" aria-label="Previsões de tempo severo"><h2>Previsões de tempo severo</h2><div id="map-severe-list"></div></section>
       <section class="feed-health" aria-label="Estado das fontes"><span class="eyebrow">AVISOS OFICIAIS · INMET</span><p id="feed-status">Verificando sincronização…</p></section>
       <section class="map-warnings" aria-labelledby="map-warning-heading"><div class="map-section-title"><h2 id="map-warning-heading">Avisos no Brasil</h2><span id="map-warning-count">—</span></div><p class="map-list-help">Selecione um aviso para localizar sua área.</p><ul id="map-warning-list" class="map-warning-list"></ul></section>
       <p class="map-source-note">Nenhum aviso disponível não significa ausência de risco. <a href="https://avisos.inmet.gov.br/" target="_blank" rel="noopener noreferrer">Consulte também o INMET ↗</a></p>

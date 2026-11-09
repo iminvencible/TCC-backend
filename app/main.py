@@ -13,7 +13,17 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.config import get_settings
 from app.database import engine
-from app.routers import admin, auth, content, dashboard, inmet, stations, users, weather
+from app.routers import (
+    admin,
+    auth,
+    content,
+    dashboard,
+    inmet,
+    severe_forecasts,
+    stations,
+    users,
+    weather,
+)
 
 settings = get_settings()
 
@@ -115,6 +125,7 @@ def ready():
 
 
 app.include_router(auth.router, prefix="/api/v1")
+app.include_router(severe_forecasts.router, prefix="/api/v1")
 app.include_router(users.router, prefix="/api/v1")
 app.include_router(weather.router, prefix="/api/v1")
 app.include_router(content.router, prefix="/api/v1")
