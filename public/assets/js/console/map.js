@@ -1,3 +1,4 @@
+import { configureStateMap } from "../sao-paulo-map.js";
 import { api, esc, empty } from "./ui.js";
 
 export async function drawMap(container) {
@@ -19,12 +20,14 @@ export async function drawMap(container) {
     return null;
   }
   const map = L.map(container, { zoomAnimation: false, fadeAnimation: false, markerZoomAnimation: false }).setView([-23.8, -46.5], 6);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 18,
-    attribution: "© OpenStreetMap contributors",
-  }).on("tileerror", () => {
-    status.textContent = "Mapa-base indisponível. Use a lista de avisos. " + PrevClima.feedStatus(data.warning_feed);
-  }).addTo(map);
+  try {
+    await configureStateMap(map, () => { status.textContent = "Mapa-base indisponível. Use a lista de avisos. " + PrevClima.feedStatus(data.warning_feed); });
+  } catch (_error) {
+    map.remove();
+    container.textContent = "O limite de São Paulo não carregou. Consulte a lista de avisos.";
+    return null;
+  }
+  if (!container.isConnected) { map.remove(); return null; }
   const alerts = L.layerGroup().addTo(map),
     forecasts = L.layerGroup().addTo(map);
   const colors = {
@@ -71,8 +74,5 @@ export async function drawMap(container) {
       "Previsões locais e de tempo severo": forecasts,
     })
     .addTo(map);
-  const point = data.forecast_points?.[0];
-  if (point) map.setView([Number(point.latitude), Number(point.longitude)], 9);
-  else if (alerts.getLayers().length) map.fitBounds(L.featureGroup(alerts.getLayers()).getBounds().pad(.15), { animate: false });
   return map;
 }

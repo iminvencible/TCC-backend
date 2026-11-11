@@ -6,6 +6,7 @@ document.addEventListener("DOMContentLoaded", () => {
   banner.hidden = true;
   banner.setAttribute("aria-live", "polite");
   banner.innerHTML = '<strong>Novo alerta na sua região</strong><p></p><a href="/alertas.html">Ver alertas</a><button type="button" aria-label="Fechar notificação">Fechar</button>';
+  if (window.location.pathname.startsWith("/mobile/")) banner.querySelector("a").href = "/mobile/alertas.html";
   document.body.append(banner);
   banner.querySelector("button").onclick = () => { banner.hidden = true; };
   function unlock() {

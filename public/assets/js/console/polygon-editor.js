@@ -1,3 +1,4 @@
+import { configureStateMap } from "../sao-paulo-map.js";
 // One editable polygon, usable by map clicks or keyboard coordinate entry.
 export function polygonEditor(host, initial = null) {
   host.innerHTML = `<div class="polygon-map console-map" aria-label="Área do aviso"></div>
@@ -9,9 +10,14 @@ export function polygonEditor(host, initial = null) {
   let rings = initial ? structuredClone(initial.coordinates) : [[]];
   let points = rings[0].slice(0, initial ? -1 : undefined).map(([lon, lat]) => [lat, lon]);
   let map = null, layer = null;
+  let destroyed = false;
   if (window.L) {
     map = L.map(host.querySelector(".polygon-map"), { zoomAnimation: false, fadeAnimation: false, markerZoomAnimation: false }).setView([-23.8, -46.5], 7);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 18, attribution: "© OpenStreetMap contributors" }).addTo(map);
+    configureStateMap(map, () => {}, () => !destroyed).then((view) => {
+      if (!destroyed && points.length >= 3) view.fitArea(L.polygon(points).getBounds());
+    }).catch(() => {
+      if (!destroyed) host.querySelector("[data-count]").textContent = "O limite de São Paulo não carregou. Use as coordenadas para editar.";
+    });
     layer = L.layerGroup().addTo(map);
     map.on("click", (event) => { points.push([event.latlng.lat, event.latlng.lng]); render(); });
   } else host.querySelector(".polygon-map").textContent = "Mapa indisponível. Informe os pontos usando latitude e longitude.";
@@ -42,5 +48,5 @@ export function polygonEditor(host, initial = null) {
   render();
   if (map && points.length >= 3) map.fitBounds(L.polygon(points).getBounds().pad(0.15), { animate: false });
   requestAnimationFrame(() => map?.invalidateSize());
-  return { geometry, destroy: () => { map?.stop(); map?.remove(); map = null; } };
+  return { geometry, destroy: () => { destroyed = true; map?.stop(); map?.remove(); map = null; } };
 }

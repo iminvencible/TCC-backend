@@ -17,6 +17,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     loginForm.querySelector(".mobile-message").textContent = "";
     registerForm.querySelector(".mobile-message").textContent = "";
   }
+  if (location.hash === "#cadastro") show(true);
   loginTab.addEventListener("click", () => show(false));
   registerTab.addEventListener("click", () => show(true));
   [loginTab, registerTab].forEach((tab) => tab.addEventListener("keydown", (event) => {
@@ -72,7 +73,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
       sessionStorage.setItem("prevclima-pending-email", registerForm.elements["email"].value.trim());
       sessionStorage.setItem("prevclima-account-return", "mobile");
-      window.location.assign("/conta.html#verify");
+      window.location.assign("/mobile/conta.html#verify");
     } catch (error) {
       message.textContent = error.message;
       PrevClima.setBusy(button, false);

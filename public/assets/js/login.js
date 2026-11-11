@@ -15,7 +15,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (!form) return;
 
   try {
-    const user = await PrevClima.request("/users/me");
+    const { user } = await PrevClima.request("/auth/professional-session");
     if (!professional || ["METEOROLOGIST", "ADMIN"].includes(user.role)) {
       window.location.replace(professional && !next
         ? (user.role === "ADMIN" ? "/admin.html" : "/profissional.html")

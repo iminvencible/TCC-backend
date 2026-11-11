@@ -163,11 +163,15 @@ def test_password_reset_expires_and_revokes_sessions(client, db, mail_outbox):
         client.post("/api/v1/auth/reset-password", json=payload, headers=headers).status_code == 400
     )
     assert (
-        client.post("/api/v1/auth/login", json={"email": EMAIL, "password": PASSWORD}).status_code
+        client.post(
+            "/api/v1/auth/login-mobile", json={"email": EMAIL, "password": PASSWORD}
+        ).status_code
         == 401
     )
     assert (
-        client.post("/api/v1/auth/login", json={"email": EMAIL, "password": "NovaS!"}).status_code
+        client.post(
+            "/api/v1/auth/login-mobile", json={"email": EMAIL, "password": "NovaS!"}
+        ).status_code
         == 200
     )
     assert (
@@ -311,8 +315,9 @@ def test_notifications_require_location_and_preferences(registered_client, db):
     user.state = None
     db.commit()
     assert registered_client.get("/api/v1/notifications").json() == []
-    user.latitude = -24.1008
-    user.longitude = -46.6200
+    # Inland point: the original fixture coordinate was offshore.
+    user.latitude = -24.09
+    user.longitude = -46.63
     db.commit()
     rows = registered_client.get("/api/v1/notifications").json()
     assert len(rows) == 1

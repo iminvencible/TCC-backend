@@ -1,17 +1,18 @@
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+  if (window.MobileSession && !await window.MobileSession) return;
   const $ = (selector) => document.querySelector(selector);
   const form = $("#map-search");
   const status = $("#map-status");
   const locationButton = $("#map-location");
   const refreshButton = $("#map-refresh");
   const colors = { LOW: "#24875a", MODERATE: "#d4a017", HIGH: "#e57928", CRITICAL: "#d84758" };
-  let map, forecastLayer, alertLayer;
+  let map, forecastLayer, alertLayer, stateView;
   let requestId = 0;
   let currentParams = new URLSearchParams();
   let lastData = null;
   let tileError = false;
   const shapes = new Map();
-  const states = "AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO".split(" ");
+  const states = ["SP"];
   $("#map-state").replaceChildren(...states.map((state) => new Option(state, state, state === "SP", state === "SP")));
 
   function element(tag, text, className) {
@@ -46,11 +47,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   function fitAll() {
     if (!map) return;
-    const layers = [...alertLayer.getLayers(), ...forecastLayer.getLayers()];
-    if (layers.length) {
-      const bounds = L.featureGroup(layers).getBounds();
-      if (bounds.isValid()) map.fitBounds(bounds.pad(.15), { maxZoom: 10 });
-    }
+    stateView?.fit();
   }
   function renderForecast(data) {
     const host = $("#map-forecast");
@@ -88,7 +85,10 @@ document.addEventListener("DOMContentLoaded", () => {
         title.addEventListener("click", () => {
           $("#alert-layer").checked = true;
           alertLayer.addTo(map);
-          map.fitBounds(shape.getBounds().pad(.2), { maxZoom: 10 });
+          if (!stateView?.fitArea(shape.getBounds())) {
+            visualNotice("Este aviso está fora do enquadramento de São Paulo. Consulte os detalhes e a fonte na lista.");
+            return;
+          }
           shape.openPopup();
           $("#weather-map").scrollIntoView({ block: "center" });
         });
@@ -145,7 +145,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (invalidGeometry) visualNotice("Algumas áreas não puderam ser desenhadas. Todos os avisos continuam na lista.");
     if (recenter) {
       const point = data.forecast_points?.[0];
-      if (point) map.setView([Number(point.latitude), Number(point.longitude)], 9);
+      if (point && stateView?.contains(Number(point.latitude), Number(point.longitude))) map.setView([Number(point.latitude), Number(point.longitude)], 9);
       else fitAll();
     }
     map.invalidateSize();
@@ -195,12 +195,18 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
   if (window.L) {
-    map = L.map("weather-map", { zoomControl: false }).setView([-15.7, -51.5], 4);
-    L.control.zoom({ position: "bottomright" }).addTo(map);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 18, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' })
-      .on("tileerror", () => { tileError = true; visualNotice("Mapa-base indisponível. Consulte as previsões e os avisos na lista."); }).addTo(map);
-    forecastLayer = L.layerGroup().addTo(map);
-    alertLayer = L.layerGroup().addTo(map);
+    try {
+      const { configureStateMap } = await import('./sao-paulo-map.js');
+      map = L.map("weather-map", { zoomControl: false, zoomSnap: .25, maxBoundsViscosity: 1 }).setView([-22.55, -48.63], 6);
+      stateView = await configureStateMap(map, () => { tileError = true; visualNotice("Mapa-base indisponível. Consulte as previsões e os avisos na lista."); });
+      L.control.zoom({ position: "bottomright" }).addTo(map);
+      forecastLayer = L.layerGroup().addTo(map);
+      alertLayer = L.layerGroup().addTo(map);
+    } catch (_error) {
+      map?.remove(); map = null;
+      visualNotice("O limite de São Paulo não carregou. Consulte a previsão e os avisos na lista.");
+      $("#map-fit").disabled = true;
+    }
   } else {
     visualNotice("O mapa visual não carregou. A busca, as previsões e a lista de avisos continuam disponíveis abaixo ou ao lado.");
     $("#map-fit").disabled = true;
@@ -211,7 +217,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   form.addEventListener("submit", (event) => {
     event.preventDefault();
-    load(new URLSearchParams({ city: form.elements.city.value.trim(), state: form.elements.state.value }));
+    load(new URLSearchParams({ city: form.elements.city.value.trim(), state: "SP" }));
   });
   refreshButton.addEventListener("click", () => load(currentParams, { recenter: false }));
   $("#map-fit").addEventListener("click", fitAll);
@@ -222,12 +228,16 @@ document.addEventListener("DOMContentLoaded", () => {
       await PrevClima.request("/users/me");
       status.textContent = "Obtendo sua localização…";
       const position = await new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: false, timeout: 10000, maximumAge: 900000 }));
+      if (stateView && !stateView.contains(position.coords.latitude, position.coords.longitude)) {
+        status.textContent = "Este mapa acompanha o estado de São Paulo. Busque uma cidade paulista.";
+        return;
+      }
       await load(new URLSearchParams({ latitude: position.coords.latitude.toFixed(2), longitude: position.coords.longitude.toFixed(2) }));
     } catch (error) {
       status.textContent = error.status === 401 ? "Entre na sua conta para usar o GPS. A busca por cidade é pública. " : "Não foi possível obter sua localização. Use a busca por cidade.";
       if (error.status === 401) {
         const link = element("a", "Entrar");
-        link.href = "/?next=/mapa.html";
+        link.href = window.location.pathname.startsWith("/mobile/") ? "/mobile/" : "/?next=/mapa.html";
         status.append(link);
       }
     } finally { locationButton.disabled = false; }
@@ -235,6 +245,6 @@ document.addEventListener("DOMContentLoaded", () => {
   setInterval(() => { if (!document.hidden) load(currentParams, { recenter: false }); }, 300000);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) load(currentParams, { recenter: false }); });
   const initial = new URLSearchParams(window.location.search);
-  if (initial.has("city") && initial.has("state")) currentParams = new URLSearchParams({ city: initial.get("city"), state: initial.get("state") });
+  if (initial.has("city") && initial.get("state") === "SP") currentParams = new URLSearchParams({ city: initial.get("city"), state: "SP" });
   load();
 });

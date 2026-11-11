@@ -41,6 +41,12 @@ def optional_current_user(
     user = db.get(User, user_id)
     if not user or not user.is_active or user.token_version != payload.get("tv"):
         return None
+    # Also enforce the split on existing tokens, not just at the login form.
+    expected_audience = "prevclima-mobile" if user.role.code == "USER" else "prevclima-web"
+    if user.role.code not in {"USER", "ADMIN", "METEOROLOGIST"}:
+        return None
+    if payload.get("aud") != expected_audience:
+        return None
     return user
 
 
@@ -76,7 +82,8 @@ def current_mobile_user(
             detail="Sessão móvel inválida",
         ) from error
     if (
-        payload.get("aud") != "prevclima-mobile"
+        payload.get("type") != "access"
+        or payload.get("aud") != "prevclima-mobile"
         or not user
         or not user.is_active
         or user.token_version != payload.get("tv")

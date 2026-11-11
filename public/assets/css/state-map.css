@@ -1,0 +1,14 @@
+.sp-dark-map.leaflet-container { background: #080f1a; color: #e5eef7; }
+/* Transform only the basemap: warning severity colors retain their meaning. */
+.sp-dark-map .sp-dark-tiles { filter: invert(1) hue-rotate(180deg) saturate(.45) brightness(.8) contrast(.95); }
+.sp-dark-map .leaflet-control-layers,
+.sp-dark-map .leaflet-bar a,
+.sp-dark-map .leaflet-popup-content-wrapper,
+.sp-dark-map .leaflet-popup-tip { background: #122033; color: #e5eef7; border-color: #34465e; }
+.sp-dark-map .leaflet-bar a:hover, .sp-dark-map .leaflet-bar a:focus { background: #23364d; color: #fff; }
+.sp-dark-map .leaflet-bar a.leaflet-disabled { background: #101b2b; color: #8292a7; }
+.sp-dark-map .leaflet-control-attribution { background: #101b2be8; color: #c4d0df; }
+.sp-dark-map .leaflet-control-attribution a,
+.sp-dark-map .leaflet-popup-content a { color: #83d4f1; }
+.sp-dark-map .leaflet-popup-content p { color: #c4d0df; }
+.sp-dark-map a:focus-visible { outline: 2px solid #83d4f1; outline-offset: 2px; }

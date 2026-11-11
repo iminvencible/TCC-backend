@@ -1,3 +1,4 @@
+@import url('./state-map.css');
 /* API-connected components layered on the supplied design system. */
 [hidden] {
   display: none !important;

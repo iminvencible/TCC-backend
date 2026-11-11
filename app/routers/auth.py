@@ -1,12 +1,13 @@
 import secrets
 from datetime import UTC, datetime
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app.config import get_settings
-from app.dependencies import CurrentUser, DbSession, MobileUser
+from app.dependencies import CurrentUser, DbSession, MobileUser, require_roles
 from app.email_auth import consume_challenge, issue_challenge, rate_limit
 from app.models import Role, User
 from app.schemas import (
@@ -106,10 +107,16 @@ def mobile_session(user: MobileUser):
     return AuthResponse(user=user_out(user), csrf_token="")
 
 
+@router.get("/professional-session", response_model=AuthResponse)
+def professional_session(user: Annotated[User, Depends(require_roles("ADMIN", "METEOROLOGIST"))]):
+    return AuthResponse(user=user_out(user), csrf_token="")
+
+
 @router.post("/login", response_model=AuthResponse)
 def login(payload: LoginRequest, response: Response, request: Request, db: DbSession):
     rate_limit(db, request, "login", normalized_email(str(payload.email)))
     user = authenticate(payload, db)
+    require_professional_account(user)
     csrf = set_auth_cookies(response, user)
     return AuthResponse(user=user_out(user), csrf_token=csrf)
 
@@ -146,12 +153,17 @@ def authenticate(payload: LoginRequest, db: DbSession) -> User:
 def login_professional(payload: LoginRequest, response: Response, request: Request, db: DbSession):
     rate_limit(db, request, "login", normalized_email(str(payload.email)))
     user = authenticate(payload, db)
-    if user.role.code not in {"METEOROLOGIST", "ADMIN"}:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Acesso profissional necessário"
-        )
+    require_professional_account(user)
     csrf = set_auth_cookies(response, user)
     return AuthResponse(user=user_out(user), csrf_token=csrf)
+
+
+def require_professional_account(user: User) -> None:
+    if user.role.code not in {"METEOROLOGIST", "ADMIN"}:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="O site é exclusivo para administradores e meteorologistas. Use o aplicativo.",
+        )
 
 
 @router.post("/logout", response_model=MessageOut)

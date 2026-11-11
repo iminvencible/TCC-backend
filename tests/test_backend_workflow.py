@@ -103,7 +103,7 @@ def test_admin_soft_delete_revokes_tokens_and_never_allows_self_delete(client: T
     )
     assert (
         client.post(
-            "/api/v1/auth/login",
+            "/api/v1/auth/login-mobile",
             json={"email": "vitima@exemplo.com", "password": "Senha123!"},
         ).status_code
         == 200

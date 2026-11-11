@@ -14,3 +14,16 @@ tmp*
 .env.production
 backups/
 artifacts/
+
+# Android builds and private release signing material
+*.apk
+*.aab
+*.jks
+*.keystore
+**/local.properties
+**/keystore.properties
+**/.gradle/
+**/build/
+*.p12
+*.dpapi
+public/downloads/*.sha256

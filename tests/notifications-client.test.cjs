@@ -4,7 +4,7 @@ const vm = require('node:vm');
 const fs = require('node:fs');
 const source = fs.readFileSync('public/assets/js/notifications.js', 'utf8');
 const settle = () => new Promise(resolve => setImmediate(resolve));
-function harness() {
+function harness(pathname = '/inicio.html') {
   const events = {}, nodes = {}, saved = new Map();
   const banner = { hidden: true, dataset: {}, setAttribute() {}, querySelector(s) { return nodes[s] ||= {}; } };
   let tick, requests = 0, sounds = 0;
@@ -17,7 +17,7 @@ function harness() {
     createGain() { return { connect() {}, gain: { setValueAtTime() {}, exponentialRampToValueAtTime() {} } }; }
   }
   vm.runInNewContext(source, {
-    document, window: { AudioContext, addEventListener() {} },
+    document, window: { AudioContext, location: { pathname }, addEventListener() {} },
     PrevClima: { request: async path => { requests++; return path === '/users/me' ? user : rows; } },
     sessionStorage: { getItem: k => saved.get(k), setItem: (k,v) => saved.set(k,v) },
     setInterval: fn => { tick = fn; return 1; }, clearInterval() {}, Date, Set, JSON,
@@ -41,4 +41,10 @@ test('expired alerts are not announced and missing local alerts remove old banne
   assert.equal(h.banner.hidden, true);
   h.rows[0].valid_until = new Date(Date.now()+60000).toISOString(); await h.poll(); assert.equal(h.banner.hidden, false);
   h.rows.length = 0; await h.poll(); assert.equal(h.banner.hidden, true);
+});
+
+
+test('mobile notification opens the mobile advisory page', async () => {
+  const h = harness('/mobile/inicio.html'); await h.start();
+  assert.equal(h.banner.querySelector('a').href, '/mobile/alertas.html');
 });

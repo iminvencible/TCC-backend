@@ -9,7 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.querySelector("#submit-code").textContent = mode === "reset" ? "Salvar nova senha" : "Confirmar cadastro";
   const stored = sessionStorage.getItem("prevclima-pending-email");
   if (stored) form.email.value = stored;
-  const mobile = sessionStorage.getItem("prevclima-account-return") === "mobile";
+  const mobile = location.pathname.startsWith("/mobile/");
   document.querySelector("#back-login").href = mobile ? "/mobile/" : "/";
   async function run(button, path, body) {
     message.textContent = "";

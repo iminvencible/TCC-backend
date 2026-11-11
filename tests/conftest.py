@@ -161,6 +161,6 @@ def verify_and_login(client, messages, email, password):
         headers=csrf_headers(client) if client.cookies.get("prevclima_csrf") else {},
     )
     assert response.status_code == 200, response.text
-    login = client.post("/api/v1/auth/login", json={"email": email, "password": password})
+    login = client.post("/api/v1/auth/login-mobile", json={"email": email, "password": password})
     assert login.status_code == 200, login.text
     return login

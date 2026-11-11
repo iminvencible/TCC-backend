@@ -1,6 +1,6 @@
 # PrevClima
 
-Aplicação web, PWA móvel para navegadores compatíveis e API FastAPI para a plataforma de
+Portal profissional, aplicativo Android, versão móvel e API FastAPI para a plataforma de
 avisos meteorológicos do TCC. O projeto usa MySQL no Docker e SQLite como opção
 leve de desenvolvimento.
 
@@ -18,12 +18,26 @@ segue o TCC: seis caracteres ou mais, uma maiúscula e um símbolo.
 Consulte [a correspondência com o documento](docs/ALINHAMENTO_TCC.md) para regras,
 interfaces novas e diferenças tecnológicas mantidas intencionalmente.
 
+## Android e separação de acesso
+
+Veja [compilação, assinatura e instalação do Android](docs/ANDROID.md).
+
+- `/`: entrada profissional para `ADMIN` e `METEOROLOGIST`.
+- `/mobile/`: cadastro, acesso e recursos destinados a `USER`.
+- `/download.html`: instruções e download do APK assinado.
+- `/downloads/prevclima.apk`: artefato gerado localmente; não é armazenado no Git.
+
+O APK usa o mesmo backend HTTPS da instalação e precisa de conexão à internet.
+Notificações são consultadas com o aplicativo aberto; não há push em segundo plano.
+Contas profissionais não entram no aplicativo e contas de usuário não entram no
+portal profissional. A API verifica função e audiência da sessão.
+
 ## Recursos concluídos
 
 - Site responsivo em português do Brasil, inspirado no protótipo do Figma.
 - Cadastro público sempre com a função `USER`, definida pelo servidor.
-- Entrada no site para usuário, meteorologista e administrador.
-- Aplicativo móvel instalável em `/mobile/`, exclusivo para contas `USER`; a
+- Portal web exclusivo para meteorologistas e administradores; aplicativo móvel exclusivo para `USER`.
+- Aplicativo móvel em `/mobile/` e APK Android disponível em `/download.html`, exclusivo para contas `USER`; a
   restrição também é validada pela API em `/api/v1/auth/login-mobile`.
 - Sessão por cookie `HttpOnly`, proteção CSRF, senha Argon2 e revogação de sessão.
 - Perfil, preferências, localização, previsão, avisos, mapa, conteúdo educativo e
@@ -31,7 +45,7 @@ interfaces novas e diferenças tecnológicas mantidas intencionalmente.
 - Previsão atual e diária obtida do Open-Meteo, com geocodificação de cidades,
   cache de 15 minutos e fallback para o último dado salvo.
 - Mapa com previsões pontuais do Open-Meteo separadas dos polígonos de avisos;
-  busca por cidade pública e GPS apenas para contas autenticadas. Se a biblioteca
+  tema escuro, enquadramento limitado ao estado de São Paulo e GPS para contas autenticadas. Se a biblioteca
   do mapa ou os mosaicos não carregarem, os dados disponíveis aparecem em texto.
 - Meteorologista: emissão direta de avisos, revisão de relatos, sincronização manual de
   avisos oficiais do INMET e marcação de aviso como alarme falso ou pendente de

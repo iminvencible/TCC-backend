@@ -13,9 +13,28 @@ $SettingsFile = Join-Path $ProjectDirectory '.env.production'
 $BackupDirectory = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'PrevClima\backups'
 $ComposeArgs = @('compose', '--env-file', $SettingsFile, '-f', (Join-Path $ProjectDirectory 'compose.production.yaml'))
 
+# Support standard per-user Docker installs and freshly installed Tailscale even
+# when the current Windows session has not refreshed PATH yet.
+foreach ($tool in @(
+    @{ Name = 'docker'; Paths = @(
+        (Join-Path $env:LOCALAPPDATA 'Programs\DockerDesktop\resources\bin'),
+        (Join-Path $env:ProgramFiles 'Docker\Docker\resources\bin')
+    ) },
+    @{ Name = 'tailscale'; Paths = @((Join-Path $env:ProgramFiles 'Tailscale')) }
+)) {
+    if (-not (Get-Command $tool.Name -ErrorAction SilentlyContinue)) {
+        foreach ($directory in $tool.Paths) {
+            if (Test-Path -LiteralPath (Join-Path $directory ($tool.Name + '.exe'))) {
+                $env:PATH = $directory + ';' + $env:PATH
+                break
+            }
+        }
+    }
+}
+
 function Invoke-Compose {
-    param([Parameter(ValueFromRemainingArguments=$true)][string[]]$Arguments)
-    & docker @ComposeArgs @Arguments
+    # Keep native flags such as -d away from PowerShell common-parameter binding.
+    & docker @ComposeArgs @args
     if ($LASTEXITCODE -ne 0) { throw "Docker falhou ($LASTEXITCODE). Consulte: .\prevclima.ps1 status" }
 }
 function New-Secret {

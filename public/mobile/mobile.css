@@ -128,3 +128,49 @@ button, input { font: inherit; } button, a { -webkit-tap-highlight-color: transp
 
 .mobile-risk-card[data-risk="unknown"] { background: #19364b; border-color: #4e6c80; }
 .mobile-risk-card[data-risk="unknown"] .mobile-risk-icon { background: #ffffff12; color: #d3e4ef; }
+
+/* Shared mobile account, map and advisory surfaces. */
+.mobile-mini-brand { display: inline-flex; align-items: center; gap: 9px; text-decoration: none; color: #e9f2ff; font-size: 20px; font-weight: 750; letter-spacing: -.04em; }
+.mobile-mini-brand img { border-radius: 12px; object-fit: cover; }
+.mobile-mini-brand strong { color: var(--yellow); }
+.mobile-secondary { display: inline-flex; align-items: center; justify-content: center; min-height: 46px; border: 1px solid #617ea5; border-radius: 12px; padding: 11px 15px; background: #183456; color: #ecf3ff; font: inherit; font-size: 13px; font-weight: 700; text-decoration: none; }
+.mobile-secondary:disabled, .mobile-text-button:disabled { opacity: .6; cursor: progress; }
+.mobile-text-button { border: 0; background: transparent; color: var(--blue-light); padding: 12px 0; min-height: 44px; font: inherit; font-size: 13px; text-align: left; text-decoration: underline; }
+.mobile-stack { display: grid; gap: 10px; }
+.mobile-account-actions { margin-top: 22px; }
+.mobile-account-actions a { min-height: 44px; display: flex; align-items: center; }
+.mobile-card h2 { font-size: 20px; letter-spacing: -.035em; margin: 0 0 16px; }
+.mobile-card section { border-top: 1px solid var(--border); padding-top: 24px; margin-top: 24px; scroll-margin-top: 24px; }
+.mobile-card .mobile-helper { margin: 10px 0 16px; }
+.mobile-card label.mobile-toggle { display: flex; justify-content: space-between; gap: 18px; align-items: center; font-size: 13px; line-height: 1.45; padding: 10px 0; }
+.mobile-toggle small { display: block; color: #b7c9e2; font-size: 11px; font-weight: 400; margin-top: 4px; }
+.mobile-toggle input { appearance: auto; accent-color: #7cafee; width: 23px; height: 23px; min-height: 23px; flex: 0 0 23px; padding: 0; }
+.mobile-toolbar { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; margin: 20px 0; }
+.mobile-toolbar a { font-size: 13px; min-height: 44px; display: inline-flex; align-items: center; }
+.mobile-footnote { color: var(--muted); font-size: 12px; line-height: 1.65; margin-top: 24px; }
+.mobile-alert-list h2 { margin: 0; font-size: 17px; line-height: 1.4; }
+.mobile-alert-list p { margin: 0; font-size: 13px; line-height: 1.65; }
+.mobile-alert-list a { padding: 10px 0 0; min-height: 38px; font-size: 12px; }
+.mobile-location-callout { margin: -10px 0 28px; display: grid; gap: 4px; font-size: 13px; }
+.mobile-map-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: max(12px, env(safe-area-inset-top)) 18px 12px; border-bottom: 1px solid #31445b; background: #0b192c; }
+.mobile-map-header > span { color: #b9cadf; font-size: 12px; }
+.mobile-map-page { --text: #e5eef7; --muted: #adbed0; --cyan: #83d4f1; --line: #31445b; --panel: #122033; --panel-soft: #1b2b41; }
+.mobile-map-page .map-workspace { height: auto; display: flex; flex-direction: column; padding-bottom: calc(100px + env(safe-area-inset-bottom)); max-width: 1100px; margin: 0 auto; }
+.mobile-map-page .map-canvas { order: -1; height: 49dvh; min-height: 300px; }
+.mobile-map-page .map-sidebar { overflow: visible; border: 0; }
+.mobile-map-page .mobile-bottom-nav { z-index: 1100; }
+.mobile-map-page .map-forecast { margin-top: 20px; }
+.mobile-map-page .map-warning-list li { color: #e5eef7; }
+.mobile-map-page .map-canvas-toolbar { top: 12px; left: 12px; right: 12px; }
+.mobile-map-page .map-canvas-toolbar > span { font-size: 9px; }
+.mobile-map-page .map-key { left: 12px; gap: 8px; padding: 9px; }
+.mobile-map-page .map-key > span { font-size: 10px; }
+.mobile-auth .helper { display: inline-block; margin-top: 18px; font-size: 12px; }
+.mobile-download-steps { padding-left: 23px; color: #c5d6ed; font-size: 14px; line-height: 1.7; }
+.mobile-download-steps li { margin: 14px 0; padding-left: 4px; }
+.mobile-download .mobile-primary { text-decoration: none; margin-top: 18px; }
+.mobile-download .mobile-secondary { width: 100%; margin-top: 12px; }
+.light .mobile-mini-brand { color: #173458; }
+.light .mobile-map-page, .light .mobile-map-page .mobile-mini-brand { color: #e5eef7; }
+.light .mobile-map-page { background: #080f1a; --text: #e5eef7; --muted: #adbed0; }
+.light .mobile-card .mobile-footnote { color: #b8cbe5; }

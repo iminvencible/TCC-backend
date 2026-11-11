@@ -14,11 +14,12 @@
   <script src="/assets/js/map.js" defer></script>
 <link rel="stylesheet" href="/assets/css/notifications.css">
 <script src="/assets/js/notifications.js" defer></script>
+  <link rel="icon" href="/assets/img/prevclima-logo.jpg" type="image/jpeg">
 </head>
 <body class="weather-map-page">
   <a class="skip-link" href="#map-search">Ir para a busca</a>
   <header class="topbar">
-    <a class="brand" href="/inicio.html"><span class="brand-mark">&#9889;</span> Prev<span>Clima</span></a>
+    <a class="brand" href="/inicio.html"><img class="brand-mark" src="/assets/img/prevclima-logo.jpg" width="42" height="42" alt=""> Prev<span>Clima</span></a>
     <nav class="desktop-nav" data-role-navigation aria-label="Navegação principal"></nav>
     <a class="map-back" href="/inicio.html">Voltar ao início <span aria-hidden="true">↗</span></a>
   </header>
@@ -36,12 +37,12 @@
       <details class="map-layers" open><summary>Camadas do mapa</summary><label><input id="forecast-layer" type="checkbox" checked><span class="layer-dot forecast-dot"></span>Previsões locais e de tempo severo</label><label><input id="alert-layer" type="checkbox" checked><span class="layer-dot warning-dot"></span>Áreas de avisos</label><p>A previsão de uma cidade não representa uma área de risco.</p></details>
       <section class="map-warnings" aria-label="Previsões de tempo severo"><h2>Previsões de tempo severo</h2><div id="map-severe-list"></div></section>
       <section class="feed-health" aria-label="Estado das fontes"><span class="eyebrow">AVISOS OFICIAIS · INMET</span><p id="feed-status">Verificando sincronização…</p></section>
-      <section class="map-warnings" aria-labelledby="map-warning-heading"><div class="map-section-title"><h2 id="map-warning-heading">Avisos no Brasil</h2><span id="map-warning-count">—</span></div><p class="map-list-help">Selecione um aviso para localizar sua área.</p><ul id="map-warning-list" class="map-warning-list"></ul></section>
+      <section class="map-warnings" aria-labelledby="map-warning-heading"><div class="map-section-title"><h2 id="map-warning-heading">Avisos meteorológicos</h2><span id="map-warning-count">—</span></div><p class="map-list-help">O mapa mostra apenas São Paulo. Avisos de outras regiões podem aparecer na lista.</p><ul id="map-warning-list" class="map-warning-list"></ul></section>
       <p class="map-source-note">Nenhum aviso disponível não significa ausência de risco. <a href="https://avisos.inmet.gov.br/" target="_blank" rel="noopener noreferrer">Consulte também o INMET ↗</a></p>
     </aside>
     <section class="map-canvas" aria-label="Visualização geográfica">
       <div id="weather-map" aria-label="Mapa de previsões e avisos meteorológicos"></div>
-      <div class="map-canvas-toolbar"><span>PREVISÃO &amp; AVISOS</span><button id="map-fit" type="button">Ver todas as áreas</button></div>
+      <div class="map-canvas-toolbar"><span>SÃO PAULO · PREVISÃO &amp; AVISOS</span><button id="map-fit" type="button">Ver todo São Paulo</button></div>
       <p id="map-visual-status" class="map-visual-status" hidden role="status"></p>
       <div class="map-key" aria-label="Legenda"><span><i class="forecast-dot"></i>Previsão</span><span><i style="background:#24875a"></i>Baixo</span><span><i style="background:#d4a017"></i>Moderado</span><span><i style="background:#e57928"></i>Alto</span><span><i style="background:#d84758"></i>Crítico</span></div>
     </section>

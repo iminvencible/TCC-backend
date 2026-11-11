@@ -52,7 +52,7 @@ def test_register_login_and_profile(client: TestClient, mail_outbox):
     assert client.get("/api/v1/users/me").status_code == 401
 
     login = client.post(
-        "/api/v1/auth/login",
+        "/api/v1/auth/login-mobile",
         json={"email": "MARIA@exemplo.com", "password": "Senha123!"},
     )
     assert login.status_code == 200

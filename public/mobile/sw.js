@@ -1,11 +1,21 @@
-const CACHE = "prevclima-mobile-v5";
+const CACHE = "prevclima-mobile-v8";
 const SHELL = [
   "/mobile/",
-  "/mobile/inicio.html",
-  "/mobile/mobile.css",
+  "/mobile/conta.html",
+  "/mobile/mobile-shell.js",
+  "/mobile/mobile-common.js",
+  "/mobile/mobile-alerts.js",
+  "/mobile/mobile-profile.js",
+  "/assets/js/account.js",
+  "/assets/js/map.js",
+  "/assets/js/sao-paulo-map.js",
+  "/assets/data/sao-paulo.geojson",
+  "/assets/css/state-map.css",
+  "/assets/css/weather-map.css",
+  "/mobile/mobile.css?v=8",
   "/mobile/mobile.js",
   "/mobile/mobile-home.js",
-  "/mobile/icon.svg",
+  "/assets/img/prevclima-logo.jpg",
   "/assets/js/api.js",
   "/assets/js/notifications.js",
   "/assets/css/notifications.css"

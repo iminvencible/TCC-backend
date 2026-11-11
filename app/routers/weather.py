@@ -9,6 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from app.audit import record_audit
 from app.config import get_settings
 from app.dependencies import CurrentUser, DbSession, optional_current_user, require_roles
+from app.geography import point_in_polygon, point_in_sao_paulo
 from app.inmet_sync import warning_feed_status
 from app.models import AlertRead, AlertReview, Forecast, User, WeatherAlert
 from app.open_meteo_sync import get_open_meteo_or_fallback
@@ -95,45 +96,6 @@ def distance_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     delta_lon = lon2_rad - lon1_rad
     value = sin(delta_lat / 2) ** 2 + cos(lat1_rad) * cos(lat2_rad) * sin(delta_lon / 2) ** 2
     return 6371.0088 * 2 * asin(sqrt(value))
-
-
-def ring_state(longitude: float, latitude: float, ring: list[list[float]]) -> int:
-    inside = False
-    for index in range(len(ring) - 1):
-        x1, y1 = ring[index][:2]
-        x2, y2 = ring[index + 1][:2]
-        cross = (longitude - x1) * (y2 - y1) - (latitude - y1) * (x2 - x1)
-        if (
-            abs(cross) <= 1e-9
-            and min(x1, x2) - 1e-9 <= longitude <= max(x1, x2) + 1e-9
-            and min(y1, y2) - 1e-9 <= latitude <= max(y1, y2) + 1e-9
-        ):
-            return 2
-        if (y1 > latitude) != (y2 > latitude):
-            intersection = (x2 - x1) * (latitude - y1) / (y2 - y1) + x1
-            if longitude < intersection:
-                inside = not inside
-    return 1 if inside else 0
-
-
-def point_in_polygon(longitude: float, latitude: float, geometry: dict) -> bool:
-    if geometry.get("type") != "Polygon":
-        return False
-    rings = geometry.get("coordinates")
-    if not isinstance(rings, list) or not rings or len(rings[0]) < 4:
-        return False
-    outer = ring_state(longitude, latitude, rings[0])
-    if outer == 0:
-        return False
-    if outer == 2:
-        return True
-    for hole in rings[1:]:
-        state = ring_state(longitude, latitude, hole)
-        if state == 2:
-            return True
-        if state == 1:
-            return False
-    return True
 
 
 def alerts_for_location(
@@ -562,13 +524,17 @@ def notifications(db: DbSession, user: CurrentUser):
     if not user.weather_notifications:
         return []
     latitude, longitude = user.latitude, user.longitude
-    if latitude is None and user.city and user.state:
+    if (latitude is None or longitude is None) and user.city and user.state:
         forecast, _ = get_open_meteo_or_fallback(
             db, city=user.city, state=user.state, require_coordinates=True
         )
         if forecast:
             latitude, longitude = forecast.latitude, forecast.longitude
     if latitude is None or longitude is None:
+        return []
+    # A recipient inside SP and inside the warning area is concrete evidence that
+    # the warning affects SP. A state name or a rectangular extent is insufficient.
+    if not point_in_sao_paulo(float(longitude), float(latitude)):
         return []
     alerts = alerts_for_location(active_alerts(db), float(latitude), float(longitude))
     read_ids = user_read_ids(db, user, [a.id for a in alerts])

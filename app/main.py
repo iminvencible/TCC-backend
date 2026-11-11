@@ -1,11 +1,13 @@
+import posixpath
 import secrets
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Annotated
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
@@ -13,6 +15,8 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.config import get_settings
 from app.database import engine
+from app.dependencies import optional_current_user
+from app.models import User
 from app.routers import (
     admin,
     auth,
@@ -135,4 +139,36 @@ app.include_router(stations.router, prefix="/api/v1")
 app.include_router(dashboard.router, prefix="/api/v1")
 
 public_dir = Path(__file__).resolve().parent.parent / "public"
-app.mount("/", StaticFiles(directory=public_dir, html=True), name="public")
+
+
+static_files = StaticFiles(directory=public_dir, html=True)
+
+
+@app.api_route("/{path:path}", methods=["GET", "HEAD"], include_in_schema=False)
+async def site_page(
+    path: str,
+    request: Request,
+    user: Annotated[User | None, Depends(optional_current_user)],
+):
+    # Normalize before authorization just as StaticFiles normalizes filesystem paths;
+    # trailing slashes and encoded dot segments must not bypass the HTML gate.
+    normalized = posixpath.normpath("/" + path.replace("\\", "/")).lstrip("/")
+    route_path = normalized.casefold()
+    if route_path == "cadastro.html":
+        return RedirectResponse("/mobile/#cadastro", status_code=303)
+    if route_path.startswith("mobile/") and route_path.endswith(".html"):
+        if route_path not in {"mobile/index.html", "mobile/conta.html"}:
+            if not user or user.role.code != "USER":
+                return RedirectResponse("/mobile/index.html", status_code=303)
+    elif route_path.endswith(".html") and route_path not in {
+        "index.html",
+        "meteorologista.html",
+        "conta.html",
+        "download.html",
+    }:
+        if not user or user.role.code not in {"ADMIN", "METEOROLOGIST"}:
+            return RedirectResponse("/meteorologista.html", status_code=303)
+    response = await static_files.get_response(normalized or ".", request.scope)
+    if route_path.endswith(".html"):
+        response.headers["Cache-Control"] = "private, no-store"
+    return response

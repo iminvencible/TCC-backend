@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>PrevClima · Mapa meteorológico</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous">
+  <link rel="stylesheet" href="/assets/css/styles.css">
+  <link rel="stylesheet" href="/assets/css/design-refresh.css">
+  <link rel="stylesheet" href="/assets/css/weather-map.css"><link rel="stylesheet" href="/mobile/mobile.css?v=8">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous" defer></script>
+  <script src="/assets/js/api.js" defer></script>
+  <script src="/mobile/mobile-shell.js" defer></script>
+  <script src="/assets/js/map.js" defer></script>
+<link rel="stylesheet" href="/assets/css/notifications.css">
+<script src="/assets/js/notifications.js" defer></script>
+  <link rel="icon" href="/assets/img/prevclima-logo.jpg" type="image/jpeg">
+</head>
+<body class="weather-map-page mobile-map-page">
+  <a class="skip-link" href="#map-search">Ir para a busca</a>
+  <header class="mobile-map-header"><a class="mobile-mini-brand" href="/mobile/inicio.html"><img src="/assets/img/prevclima-logo.jpg" width="36" height="36" alt=""><span>Prev<strong>Clima</strong></span></a><span>Mapa de São Paulo</span></header><div id="mobile-session-status" role="status"></div>
+  <main class="map-workspace">
+    <aside class="map-sidebar" aria-label="Busca e dados meteorológicos">
+      <div class="map-intro"><span class="eyebrow">EXPLORE SUA REGIÃO</span><h1>O tempo no mapa<span>.</span></h1><p>Previsões locais e avisos meteorológicos, com a origem de cada informação.</p></div>
+      <form id="map-search" class="map-search" role="search" aria-label="Buscar previsão por cidade">
+        <div class="field"><label for="map-city">Cidade</label><input id="map-city" name="city" placeholder="Ex.: Mongaguá" minlength="2" maxlength="100" required autocomplete="address-level2"></div>
+        <div class="field"><label for="map-state">UF</label><select id="map-state" name="state" required aria-label="Estado"><option value="SP">SP</option></select></div>
+        <button class="button" type="submit">Buscar previsão <span aria-hidden="true">→</span></button>
+      </form>
+      <div class="map-actions"><button id="map-location" class="button secondary" type="button">◎ Minha localização</button><button id="map-refresh" class="button secondary" type="button">↻ Atualizar</button></div>
+      <p id="map-status" class="map-status" role="status" aria-live="polite">Consultando fontes meteorológicas…</p>
+      <section id="map-forecast" class="map-forecast" aria-label="Previsão selecionada" aria-live="polite"><p>Buscando a previsão da sua região…</p></section>
+      <details class="map-layers" open><summary>Camadas do mapa</summary><label><input id="forecast-layer" type="checkbox" checked><span class="layer-dot forecast-dot"></span>Previsões locais e de tempo severo</label><label><input id="alert-layer" type="checkbox" checked><span class="layer-dot warning-dot"></span>Áreas de avisos</label><p>A previsão de uma cidade não representa uma área de risco.</p></details>
+      <section class="map-warnings" aria-label="Previsões de tempo severo"><h2>Previsões de tempo severo</h2><div id="map-severe-list"></div></section>
+      <section class="feed-health" aria-label="Estado das fontes"><span class="eyebrow">AVISOS OFICIAIS · INMET</span><p id="feed-status">Verificando sincronização…</p></section>
+      <section class="map-warnings" aria-labelledby="map-warning-heading"><div class="map-section-title"><h2 id="map-warning-heading">Avisos meteorológicos</h2><span id="map-warning-count">—</span></div><p class="map-list-help">O mapa mostra apenas São Paulo. Avisos de outras regiões podem aparecer na lista.</p><ul id="map-warning-list" class="map-warning-list"></ul></section>
+      <p class="map-source-note">Nenhum aviso disponível não significa ausência de risco. <a href="https://avisos.inmet.gov.br/" target="_blank" rel="noopener noreferrer">Consulte também o INMET ↗</a></p>
+    </aside>
+    <section class="map-canvas" aria-label="Visualização geográfica">
+      <div id="weather-map" aria-label="Mapa de previsões e avisos meteorológicos"></div>
+      <div class="map-canvas-toolbar"><span>SÃO PAULO · PREVISÃO &amp; AVISOS</span><button id="map-fit" type="button">Ver todo São Paulo</button></div>
+      <p id="map-visual-status" class="map-visual-status" hidden role="status"></p>
+      <div class="map-key" aria-label="Legenda"><span><i class="forecast-dot"></i>Previsão</span><span><i style="background:#24875a"></i>Baixo</span><span><i style="background:#d4a017"></i>Moderado</span><span><i style="background:#e57928"></i>Alto</span><span><i style="background:#d84758"></i>Crítico</span></div>
+    </section>
+  </main>
+  <nav class="mobile-bottom-nav" aria-label="Navegação do aplicativo"><a href="/mobile/inicio.html" data-nav="inicio"><span class="mobile-nav-icon" aria-hidden="true">⌂</span><span>Início</span></a><a href="/mobile/alertas.html" data-nav="alertas"><span class="mobile-nav-icon" aria-hidden="true">⚠</span><span>Avisos</span></a><a href="/mobile/mapa.html" data-nav="mapa"><span class="mobile-nav-icon" aria-hidden="true">⌖</span><span>Mapa</span></a><a href="/mobile/perfil.html" data-nav="perfil"><span class="mobile-nav-icon" aria-hidden="true">◉</span><span>Perfil</span></a></nav>
+</body>
+</html>

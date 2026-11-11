@@ -16,3 +16,15 @@ tmp*
 .env.production
 backups
 artifacts
+
+android
+android-app
+**/.gradle
+**/build
+*.jks
+*.keystore
+**/local.properties
+**/keystore.properties
+
+*.p12
+*.dpapi

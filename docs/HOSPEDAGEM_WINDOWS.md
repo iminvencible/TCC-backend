@@ -123,7 +123,7 @@ com dados reais sem revisar a migração.
 
 Abra o link em um celular **usando dados móveis**. Confirme:
 
-1. Login profissional e cadastro público; entrega real dos códigos por e-mail.
+1. Login profissional no site e cadastro de usuário em `/mobile/`; entrega real dos códigos por e-mail.
 2. Verificação, redefinição de senha e entrada com a nova senha.
 3. Publicação de previsão/alerta com polígono e exibição no mapa público.
 4. Notificação dentro de uma página aberta para uma conta localizada na área.
@@ -139,3 +139,15 @@ reiniciar; falha SMTP permite reenviar o código em `/conta.html#verify`; falta 
 INMET preserva dados salvos ainda vigentes e mostra o estado da fonte. Confira o
 spam e as cotas do e-mail. As tentativas de autenticação são limitadas no banco;
 atrás do Funnel, parte do limite por IP pode ser compartilhada entre visitantes.
+
+## Aplicativo Android e portal profissional
+
+O portal `/` é exclusivo para administradores e meteorologistas. Usuários comuns
+acessam `/mobile/` ou o APK em `/download.html`. As permissões são validadas pela
+API e pelas rotas HTML. Sessões web antigas de usuários comuns exigem nova entrada
+pelo aplicativo. A conta e os dados existentes são preservados.
+
+Para gerar o APK assinado antes de reconstruir os contêineres, siga
+[ANDROID.md](ANDROID.md). O arquivo `public/downloads/prevclima.apk` é um artefato
+local ignorado pelo Git, mas incluído na imagem Docker para download. Uma nova
+clonagem deve compilar o APK antes de disponibilizar o botão de download.

@@ -1,19 +1,9 @@
 document.addEventListener("DOMContentLoaded", async () => {
-  if ("serviceWorker" in navigator) navigator.serviceWorker.register("/mobile/sw.js");
-  try {
-    const session = await PrevClima.request("/auth/mobile-session");
-    const user = session.user;
-    if (user.role !== "USER") {
-      window.location.replace("/mobile/");
-      return;
-    }
-    document.querySelector("#mobile-user").textContent = user.name?.trim().split(/\s+/)[0] || "você";
-    document.querySelector("#mobile-location").textContent = user.city && user.state ? `${user.city}, ${user.state}` : "Brasil";
-    PrevClima.applyTheme(user);
-  } catch (_error) {
-    window.location.replace("/mobile/");
-    return;
-  }
+  const user = await window.MobileSession;
+  if (!user) return;
+  document.querySelector("#mobile-user").textContent = user.name?.trim().split(/\s+/)[0] || "você";
+  document.querySelector("#mobile-location").textContent = user.city ? `${user.city}, ${user.state}` : "São Paulo · escolha sua cidade";
+  document.querySelector("#mobile-refresh").addEventListener("click", () => location.reload());
 
   try {
     const home = await PrevClima.request("/home");
@@ -36,19 +26,25 @@ document.addEventListener("DOMContentLoaded", async () => {
       document.querySelector("#mobile-condition").textContent = "Previsão indisponível no momento";
       source.textContent = "Acompanhe os avisos abaixo";
     }
-    const alerts = home.active_alerts || [];
+    const { hasRegionalLocation } = await import('./mobile-common.js');
+    const regional = await hasRegionalLocation(user);
+    const alerts = regional ? (home.active_alerts || []).filter((alert) => Date.parse(alert.valid_until) > Date.now()) : [];
     const risk = document.querySelector("#mobile-risk-card");
     const highestSeverity = alerts.some((alert) => ["CRITICAL", "HIGH"].includes(alert.severity));
     risk.dataset.risk = alerts.length ? (highestSeverity ? "high" : "moderate") : "unknown";
     risk.querySelector(".mobile-risk-icon").textContent = alerts.length ? "!" : "i";
     document.querySelector("#mobile-risk-title").textContent = alerts.length ? `${alerts.length} aviso(s) ativo(s)` : "Nenhum aviso disponível";
     document.querySelector("#mobile-risk-copy").textContent = alerts.length ? (alerts.find((alert) => ["CRITICAL", "HIGH"].includes(alert.severity)) || alerts[0]).title : PrevClima.feedStatus(home.warning_feed);
+    if (!regional) {
+      document.querySelector("#mobile-risk-title").textContent = "Configure sua localização";
+      document.querySelector("#mobile-risk-copy").textContent = "Salve seu GPS no perfil para receber avisos da sua área em São Paulo.";
+    }
     const list = document.querySelector("#mobile-alerts");
     list.replaceChildren();
     if (!alerts.length) {
       const empty = document.createElement("p");
       empty.className = "mobile-list-state";
-      empty.textContent = "Nenhum aviso nas áreas acompanhadas. Confira também os avisos oficiais do INMET.";
+      empty.textContent = regional ? "Nenhum aviso nas áreas acompanhadas. Confira também os avisos oficiais do INMET." : "Seus avisos aparecem aqui depois de salvar uma localização em São Paulo.";
       list.append(empty);
     } else {
       alerts.slice(0, 3).forEach((alert) => {
@@ -80,6 +76,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   document.querySelector("#mobile-logout").addEventListener("click", async () => {
-    try { await PrevClima.request("/auth/logout", { method: "POST" }); } finally { window.location.assign("/mobile/"); }
+    try { await PrevClima.request("/auth/logout", { method: "POST" }); window.location.assign("/mobile/"); } catch (error) { document.querySelector("#mobile-risk-copy").textContent = error.message; }
   });
 });

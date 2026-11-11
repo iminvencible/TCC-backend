@@ -1,4 +1,5 @@
-.weather-map-page { background: var(--bg); }
+@import url('./state-map.css');
+.weather-map-page { --bg: #080f1a; --panel: #122033; --panel-soft: #1b2b41; --text: #e5eef7; --muted: #adbed0; --line: #31445b; --cyan: #83d4f1; background: var(--bg); color: var(--text); }
 .map-back { color: var(--muted); font-size: 13px; white-space: nowrap; }
 .map-workspace { display: grid; grid-template-columns: 370px minmax(0, 1fr); height: calc(100dvh - 77px); }
 .map-sidebar { overflow-y: auto; padding: 28px; border-right: 1px solid var(--line); scrollbar-width: thin; }
@@ -35,8 +36,8 @@
 .map-warning-list p { color: var(--muted); font-size: 12px; margin: 6px 0; line-height: 1.55; }
 .map-warning-list a, .map-source-note a { color: var(--cyan); text-decoration: underline; font-size: 12px; }
 .map-warning-list .warning-level { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .09em; }
-.map-canvas { position: relative; min-width: 0; background: #dce5e9; }
-.weather-map-page #weather-map { position: absolute; inset: 0; background: #dce5e9; z-index: 0; }
+.map-canvas { position: relative; min-width: 0; background: #080f1a; }
+.weather-map-page #weather-map { position: absolute; inset: 0; background: transparent; z-index: 0; }
 .map-canvas-toolbar { position: absolute; z-index: 500; top: 20px; left: 20px; right: 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; pointer-events: none; }
 .map-canvas-toolbar > span { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 10px 13px; font-size: 10px; letter-spacing: .12em; font-weight: 800; }
 .map-canvas-toolbar button { pointer-events: auto; color: var(--text); background: var(--panel); border: 1px solid var(--line); padding: 12px; border-radius: 8px; font: inherit; font-size: 12px; cursor: pointer; box-shadow: 0 4px 16px #0001; }

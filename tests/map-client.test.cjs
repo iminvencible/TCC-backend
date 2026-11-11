@@ -23,7 +23,7 @@ async function setup() {
   const context = {
     document: { querySelector: node, createElement: () => new Element(), hidden: false,
       addEventListener: (name, fn) => { if (name === 'DOMContentLoaded') ready = fn; } },
-    window: { location: { search: '' } }, navigator: { geolocation: {} },
+    window: { location: { search: '', pathname: '/mapa.html' } }, navigator: { geolocation: {} },
     URL, URLSearchParams, Date, Map, Option: class extends Element {}, setInterval() {},
     PrevClima: {
       request: (url) => new Promise((resolve, reject) => requests.push({ url, resolve, reject })),

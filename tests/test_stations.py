@@ -103,7 +103,9 @@ def test_permissions_and_invalid_import(registered_client, client, operator):
     # The operator fixture changes this shared client's session; explicitly log out.
     client.post("/api/v1/auth/logout", headers=csrf_headers(client))
     assert client.post("/api/v1/stations/sync-catalog").status_code == 401
-    client.post("/api/v1/auth/login", json={"email": "maria@exemplo.com", "password": "Senha123!"})
+    client.post(
+        "/api/v1/auth/login-mobile", json={"email": "maria@exemplo.com", "password": "Senha123!"}
+    )
     assert (
         client.post("/api/v1/stations/sync-catalog", headers=csrf_headers(client)).status_code
         == 403
