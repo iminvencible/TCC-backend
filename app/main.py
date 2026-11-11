@@ -1,3 +1,4 @@
+import mimetypes
 import posixpath
 import secrets
 from contextlib import asynccontextmanager
@@ -141,6 +142,7 @@ app.include_router(dashboard.router, prefix="/api/v1")
 public_dir = Path(__file__).resolve().parent.parent / "public"
 
 
+mimetypes.add_type("application/vnd.android.package-archive", ".apk")
 static_files = StaticFiles(directory=public_dir, html=True)
 
 
